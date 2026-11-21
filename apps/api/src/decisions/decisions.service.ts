@@ -51,6 +51,30 @@ export class DecisionsService {
     return repo;
   }
 
+  private async verifyReviewerRole(
+    workspaceId: string,
+    user?: AuthenticatedUser,
+  ): Promise<void> {
+    if (!user || !this.prisma?.workspaceMember?.findUnique) return;
+    try {
+      const membership = await this.prisma.workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId,
+            userId: user.id,
+          },
+        },
+      });
+      if (membership && membership.role === "VIEWER") {
+        throw new ForbiddenException(
+          "Workspace viewers are not permitted to review, approve, or modify engineering decisions.",
+        );
+      }
+    } catch (err) {
+      if (err instanceof ForbiddenException) throw err;
+    }
+  }
+
   async listDecisions(
     workspaceId: string,
     repositoryId: string,
@@ -169,6 +193,7 @@ export class DecisionsService {
     dto: ReviewDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
@@ -194,6 +219,7 @@ export class DecisionsService {
     dto: ReviewDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
@@ -217,6 +243,7 @@ export class DecisionsService {
     dto: ReviewDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
@@ -241,6 +268,7 @@ export class DecisionsService {
     dto: SupersedeDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     const oldDecision = await this.getDecisionById(
       workspaceId,
       repositoryId,
@@ -341,6 +369,9 @@ export class DecisionsService {
       dto.targetSymbol?.trim() || claim.targetSymbol || null;
 
     const isExplicitlyAccepted = dto.status === "ACCEPTED";
+    if (isExplicitlyAccepted) {
+      await this.verifyReviewerRole(workspaceId, user);
+    }
     const status: DecisionStatus = isExplicitlyAccepted ? "ACCEPTED" : "CANDIDATE";
     const reviewerId = isExplicitlyAccepted ? (user?.id || null) : null;
     const reviewerName = isExplicitlyAccepted
@@ -441,9 +472,30 @@ export class DecisionsService {
       repoRoot = path.resolve(cwd, "../..");
     }
 
-    const safeRelative = customDir.replace(/^(\.\.(\/|\\|$))+/, "");
-    const adrDir = path.resolve(repoRoot, safeRelative);
-    return { repoRoot, adrDir, relativeDir: safeRelative };
+    const inputDir = (customDir || "docs/adr").trim();
+    // Prohibit path traversal tokens and absolute paths escaping workspace boundary
+    if (
+      path.isAbsolute(inputDir) ||
+      inputDir.includes("..") ||
+      inputDir.startsWith("/") ||
+      inputDir.startsWith("\\")
+    ) {
+      throw new BadRequestException(
+        "Invalid ADR directory path: directory traversal and absolute paths are prohibited.",
+      );
+    }
+
+    const normalized = path.normalize(inputDir);
+    const adrDir = path.resolve(repoRoot, normalized);
+
+    const relativeToRoot = path.relative(repoRoot, adrDir);
+    if (relativeToRoot.startsWith("..") || path.isAbsolute(relativeToRoot)) {
+      throw new BadRequestException(
+        "Invalid ADR directory path: target directory must reside within repository root.",
+      );
+    }
+
+    return { repoRoot, adrDir, relativeDir: relativeToRoot || "docs/adr" };
   }
 
   /**
@@ -513,6 +565,9 @@ export class DecisionsService {
     }
 
     const targetFilePath = path.join(adrDir, adrDto.fileName);
+    if (!path.resolve(targetFilePath).startsWith(adrDir)) {
+      throw new BadRequestException("Invalid target file path for ADR export.");
+    }
     fs.writeFileSync(targetFilePath, adrDto.markdown, "utf-8");
 
     const relativePath = path.join(relativeDir, adrDto.fileName);
@@ -562,6 +617,20 @@ export class DecisionsService {
         const markdown = formatDecisionToAdrMarkdown(decision, sequenceNumber);
         const fullPath = path.join(adrDir, fileName);
         const relPath = path.join(relativeDir, fileName);
+
+        // Conflict resolution: Check if file already exists on disk and was modified more recently than DB record
+        if (fs.existsSync(fullPath)) {
+          const fileStat = fs.statSync(fullPath);
+          const decisionTimestamp = new Date(decision.updatedAt || decision.createdAt).getTime();
+          // If file on disk is newer by >1s, preserve manual edits and do not overwrite
+          if (fileStat.mtimeMs > decisionTimestamp + 1000) {
+            this.logger.log(
+              `Preserving newer disk file ${relPath} (mtime ${new Date(fileStat.mtimeMs).toISOString()} > db ${new Date(decisionTimestamp).toISOString()})`,
+            );
+            syncedFiles.push(relPath);
+            continue;
+          }
+        }
 
         fs.writeFileSync(fullPath, markdown, "utf-8");
         await this.projectAdrToSourceRecord(
@@ -647,8 +716,22 @@ export class DecisionsService {
           },
         });
 
+        const fileStat = fs.statSync(item.fullPath);
+        const fileMtime = fileStat.mtimeMs;
+
         let savedRecord: any;
         if (existing) {
+          const dbTimestamp = new Date(existing.updatedAt || existing.createdAt).getTime();
+          // Conflict resolution: If DB record was modified more recently than disk file by >1s, preserve DB record
+          if (dbTimestamp > fileMtime + 1000) {
+            this.logger.log(
+              `Preserving newer database record for "${existing.title}" (db ${new Date(dbTimestamp).toISOString()} > file ${new Date(fileMtime).toISOString()})`,
+            );
+            syncedFiles.push(item.relPath);
+            importedCount++;
+            continue;
+          }
+
           savedRecord = await this.prisma.engineeringDecision.update({
             where: { id: existing.id },
             data: {

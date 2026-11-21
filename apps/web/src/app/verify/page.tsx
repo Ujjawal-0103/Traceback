@@ -298,6 +298,16 @@ function VerifyWorkspaceContent() {
     }
   }, [urlSessionId, urlRepoId, activeWorkspace, loadExistingSession]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && promoteModalAssessment) {
+        setPromoteModalAssessment(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [promoteModalAssessment]);
+
   // Handle Verification Submission
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1736,6 +1746,9 @@ function VerifyWorkspaceContent() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="promote-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPromoteModalAssessment(null);
+          }}
           style={{
             position: "fixed",
             top: 0,

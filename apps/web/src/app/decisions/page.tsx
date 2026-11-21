@@ -198,6 +198,17 @@ function DecisionMemoryContent() {
     }
   }, [selectedRepoId, statusFilter, loadDecisions]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (viewingAdr) setViewingAdr(null);
+        if (isSyncModalOpen) setIsSyncModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewingAdr, isSyncModalOpen]);
+
   const handleCreateDecision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRepoId) return;
@@ -1522,6 +1533,9 @@ function DecisionMemoryContent() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="adr-preview-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setViewingAdr(null);
+          }}
           style={{
             position: "fixed",
             top: 0,
@@ -1704,6 +1718,9 @@ function DecisionMemoryContent() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="adr-sync-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsSyncModalOpen(false);
+          }}
           style={{
             position: "fixed",
             top: 0,
@@ -2014,6 +2031,28 @@ function DecisionMemoryContent() {
                   >
                     {syncResult.syncedFiles.map((f, i) => (
                       <div key={i}>✓ {f}</div>
+                    ))}
+                  </div>
+                )}
+
+                {syncResult.errors && syncResult.errors.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "0.5rem",
+                      padding: "0.4rem 0.6rem",
+                      backgroundColor: "rgba(239, 68, 68, 0.1)",
+                      borderRadius: "4px",
+                      color: "var(--color-error, #ef4444)",
+                      fontSize: "0.75rem",
+                      maxHeight: "100px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: "0.2rem" }}>
+                      Warnings / Skipped Files:
+                    </div>
+                    {syncResult.errors.map((e, idx) => (
+                      <div key={idx}>⚠️ {e}</div>
                     ))}
                   </div>
                 )}

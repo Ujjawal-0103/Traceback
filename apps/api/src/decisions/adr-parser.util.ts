@@ -177,7 +177,24 @@ export function formatDecisionToAdrMarkdown(
   return lines.join("\n");
 }
 
+export function sanitizeText(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+    .replace(/javascript:/gi, "")
+    .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F]/g, "")
+    .trim();
+}
+
 export function parseAdrMarkdownToDecision(markdown: string): ParsedAdr {
+  if (!markdown || typeof markdown !== "string" || markdown.trim().length === 0) {
+    throw new Error("ADR markdown content is empty.");
+  }
+  if (markdown.length > 500_000) {
+    throw new Error("ADR markdown content exceeds maximum allowed size (500KB).");
+  }
+
   const lines = markdown.split(/\r?\n/);
 
   let title = "Imported Architectural Decision";
@@ -299,20 +316,20 @@ export function parseAdrMarkdownToDecision(markdown: string): ParsedAdr {
   }
 
   return {
-    identifier,
-    title,
+    identifier: identifier ? sanitizeText(identifier) : undefined,
+    title: sanitizeText(title) || "Imported Architectural Decision",
     status,
     severity,
     date,
-    targetFilePath,
-    targetSymbol,
-    reviewerName,
+    targetFilePath: targetFilePath ? sanitizeText(targetFilePath) : undefined,
+    targetSymbol: targetSymbol ? sanitizeText(targetSymbol) : undefined,
+    reviewerName: reviewerName ? sanitizeText(reviewerName) : undefined,
     reviewedAt,
     createdFromClaimId,
-    summary,
-    decision,
-    rationale,
+    summary: sanitizeText(summary),
+    decision: sanitizeText(decision),
+    rationale: sanitizeText(rationale),
     supportingEvidence,
-    reviewNotes,
+    reviewNotes: reviewNotes ? sanitizeText(reviewNotes) : undefined,
   };
 }

@@ -258,5 +258,34 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
         if (fs.existsSync(tempAdrDir)) fs.rmSync(tempAdrDir, { recursive: true });
       }
     });
+
+    it("prevents arbitrary directory traversal attacks in ADR directory resolution", () => {
+      expect(() =>
+        (service as any).resolveAdrDirectory("../../../../etc"),
+      ).toThrow();
+      expect(() =>
+        (service as any).resolveAdrDirectory("foo/../../../../outside"),
+      ).toThrow();
+    });
+
+    it("enforces role-based permissions preventing viewers from accepting decisions", async () => {
+      prisma.workspaceMember = {
+        findUnique: jest.fn().mockResolvedValue({
+          workspaceId: "ws-1",
+          userId: "viewer-user-1",
+          role: "VIEWER",
+        }),
+      };
+
+      await expect(
+        service.acceptDecision(
+          "ws-1",
+          "repo-1",
+          "dec-1",
+          { reviewNotes: "Viewer attempting acceptance" },
+          { id: "viewer-user-1", email: "viewer@org.com", name: "Viewer" } as any,
+        ),
+      ).rejects.toThrow("Workspace viewers are not permitted");
+    });
   });
 });

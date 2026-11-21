@@ -98,4 +98,27 @@ describe("ADR Parser & Serializer Util", () => {
     expect(parsed.supportingEvidence.length).toBeGreaterThan(0);
     expect(parsed.supportingEvidence[0].referenceKey).toBe("7a8b9c");
   });
+
+  it("sanitizes malicious markup and control characters from imported content", () => {
+    const maliciousMd = `# ADR-003: <script>alert('xss')</script>Secure Auth
+## Context
+Valid context <iframe src="evil.com"></iframe> with control \u0000 chars.
+## Decision & Consequences
+Use safe tokens javascript:void(0).
+## Rationale
+No scripts allowed.
+`;
+    const parsed = parseAdrMarkdownToDecision(maliciousMd);
+    expect(parsed.title).toBe("Secure Auth");
+    expect(parsed.title).not.toContain("<script>");
+    expect(parsed.summary).not.toContain("<iframe");
+    expect(parsed.summary).not.toContain("\u0000");
+    expect(parsed.decision).not.toContain("javascript:");
+  });
+
+  it("rejects empty or excessively large markdown files", () => {
+    expect(() => parseAdrMarkdownToDecision("   ")).toThrow("ADR markdown content is empty.");
+    const hugeContent = "# ADR-999: Huge\n" + "x".repeat(500_001);
+    expect(() => parseAdrMarkdownToDecision(hugeContent)).toThrow("exceeds maximum allowed size");
+  });
 });
