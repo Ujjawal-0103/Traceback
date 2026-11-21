@@ -11,6 +11,7 @@ import {
   DecisionSeverity,
   EngineeringDecisionDto,
 } from "@traceback/shared-types";
+import { AdrSyncPanel } from "../../components/decisions/AdrSyncPanel";
 
 function DecisionMemoryContent() {
   const searchParams = useSearchParams();
@@ -365,6 +366,13 @@ function DecisionMemoryContent() {
           </Link>
         </div>
       </div>
+
+      {/* Bidirectional ADR Markdown Sync Panel */}
+      <AdrSyncPanel
+        repositoryId={selectedRepoId}
+        decisions={decisions}
+        onSyncSuccess={() => loadDecisions(selectedRepoId, statusFilter)}
+      />
 
       {feedback && (
         <div
