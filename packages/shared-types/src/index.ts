@@ -768,3 +768,48 @@ export interface RecordIntentDispositionDto {
   disposition: HumanDisposition;
   notes?: string;
 }
+
+// ============================================================================
+// Feature 4: ADR Synchronization & Evidence-to-Decision Contracts
+// ============================================================================
+
+export type AdrSyncDirection = "EXPORT" | "IMPORT" | "BIDIRECTIONAL";
+
+export interface AdrSyncResultDto {
+  totalFilesScanned: number;
+  exportedCount: number;
+  importedCount: number;
+  syncedFiles: string[];
+  errors?: string[];
+  timestamp: string;
+}
+
+export interface AdrFileDto {
+  decisionId?: string;
+  identifier: string; // e.g. "ADR-001"
+  title: string;
+  fileName: string; // e.g. "ADR-001-adoption-of-turborepo.md"
+  filePath: string; // e.g. "docs/adr/ADR-001-adoption-of-turborepo.md"
+  markdown: string;
+  status: DecisionStatus;
+  date: string;
+}
+
+export interface SyncAdrOptionsDto {
+  direction?: AdrSyncDirection;
+  adrDirectory?: string; // defaults to "docs/adr"
+}
+
+export interface PromoteToDecisionRequest {
+  claimId: string;
+  title?: string;
+  summary?: string;
+  decision?: string;
+  rationale?: string;
+  targetFilePath?: string;
+  targetSymbol?: string;
+  severity?: DecisionSeverity;
+  status?: DecisionStatus; // "CANDIDATE" or "ACCEPTED"
+  reviewNotes?: string;
+}
+

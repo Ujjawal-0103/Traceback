@@ -5,6 +5,8 @@ import {
   ForbiddenException,
   Logger,
 } from "@nestjs/common";
+import * as fs from "fs";
+import * as path from "path";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateDecisionDto,
@@ -12,14 +14,24 @@ import {
   ReviewDecisionDto,
   SupersedeDecisionDto,
   ProposeFromClaimDto,
+  SyncAdrsDto,
+  ExportAdrDto,
 } from "./decisions.dto";
 import {
   DecisionStatus,
   DecisionSeverity,
   EngineeringDecisionDto,
   EvidenceReference,
+  AdrFileDto,
+  AdrSyncResultDto,
 } from "@traceback/shared-types";
 import { AuthenticatedUser } from "../auth/auth.types";
+import {
+  formatDecisionToAdrMarkdown,
+  parseAdrMarkdownToDecision,
+  generateAdrFileName,
+} from "./adr-parser.util";
+
 
 @Injectable()
 export class DecisionsService {
@@ -313,18 +325,43 @@ export class DecisionsService {
         ? `Architectural Constraint for ${claim.targetSymbol}`
         : claim.text.slice(0, 100));
 
+    const summary =
+      dto.summary?.trim() || `Derived from verified claim: "${claim.text}"`;
+    const decision =
+      dto.decision?.trim() ||
+      `Preserve established architectural constraint: ${claim.text}`;
+    const rationale =
+      dto.rationale?.trim() ||
+      `Verified historical evidence confirms this requirement was intentionally implemented. Original session explanation: "${claim.session.explanation.slice(0, 300)}"`;
+    const targetFilePath =
+      dto.targetFilePath?.trim() ||
+      claim.session.targetFilePath ||
+      (evidenceItems[0]?.filePath ?? null);
+    const targetSymbol =
+      dto.targetSymbol?.trim() || claim.targetSymbol || null;
+
+    const isExplicitlyAccepted = dto.status === "ACCEPTED";
+    const status: DecisionStatus = isExplicitlyAccepted ? "ACCEPTED" : "CANDIDATE";
+    const reviewerId = isExplicitlyAccepted ? (user?.id || null) : null;
+    const reviewerName = isExplicitlyAccepted
+      ? (user?.name || "Human Reviewer")
+      : null;
+    const reviewNotes = isExplicitlyAccepted
+      ? (dto.reviewNotes?.trim() || "Explicitly accepted by reviewer during promotion.")
+      : null;
+    const reviewedAt = isExplicitlyAccepted ? new Date() : null;
+
     const decisionRecord = await this.prisma.engineeringDecision.create({
       data: {
         workspaceId,
         repositoryId,
         title,
-        summary: `Derived from verified claim: "${claim.text}"`,
-        decision: `Preserve established architectural constraint: ${claim.text}`,
-        rationale: `Verified historical evidence confirms this requirement was intentionally implemented. Original session explanation: "${claim.session.explanation.slice(0, 300)}"`,
-        targetFilePath:
-          claim.session.targetFilePath || (evidenceItems[0]?.filePath ?? null),
-        targetSymbol: claim.targetSymbol || null,
-        status: "CANDIDATE",
+        summary,
+        decision,
+        rationale,
+        targetFilePath,
+        targetSymbol,
+        status: status as any,
         severity: (dto.severity as any) || "HIGH",
         supportingEvidence: (evidenceItems as any) || [],
         relatedCommitSha:
@@ -338,17 +375,403 @@ export class DecisionsService {
             10,
           ) || null,
         createdFromClaimId: claim.id,
-        reviewerId: user?.id || null,
-        reviewerName: user?.name || null,
+        reviewerId,
+        reviewerName,
+        reviewNotes,
+        reviewedAt,
       },
     });
 
     this.logger.log(
-      `Proposed engineering decision candidate ${decisionRecord.id} from claim ${claim.id}`,
+      `Proposed engineering decision ${decisionRecord.id} (${status}) from claim ${claim.id}`,
     );
 
     return this.mapDecisionToDto(decisionRecord);
   }
+
+  /**
+   * Generates formatted ADR markdown and metadata for a specific decision record.
+   */
+  async getDecisionAdr(
+    workspaceId: string,
+    repositoryId: string,
+    id: string,
+  ): Promise<AdrFileDto> {
+    const decision = await this.getDecisionById(workspaceId, repositoryId, id);
+
+    // Calculate sequential number based on created order in repository
+    const priorDecisionsCount = await this.prisma.engineeringDecision.count({
+      where: {
+        repositoryId,
+        createdAt: { lte: new Date(decision.createdAt) },
+      },
+    });
+
+    const sequenceNumber = Math.max(1, priorDecisionsCount);
+    const pad = String(sequenceNumber).padStart(3, "0");
+    const identifier = `ADR-${pad}`;
+    const fileName = generateAdrFileName(sequenceNumber, decision.title);
+    const markdown = formatDecisionToAdrMarkdown(decision, sequenceNumber);
+
+    return {
+      decisionId: decision.id,
+      identifier,
+      title: decision.title,
+      fileName,
+      filePath: `docs/adr/${fileName}`,
+      markdown,
+      status: decision.status,
+      date: decision.reviewedAt || decision.createdAt,
+    };
+  }
+
+  /**
+   * Resolves the target ADR directory safely on the workspace filesystem.
+   */
+  private resolveAdrDirectory(customDir = "docs/adr"): {
+    repoRoot: string;
+    adrDir: string;
+    relativeDir: string;
+  } {
+    const cwd = process.cwd();
+    let repoRoot = cwd;
+    if (fs.existsSync(path.resolve(cwd, "docs"))) {
+      repoRoot = cwd;
+    } else if (fs.existsSync(path.resolve(cwd, "../../docs"))) {
+      repoRoot = path.resolve(cwd, "../..");
+    }
+
+    const safeRelative = customDir.replace(/^(\.\.(\/|\\|$))+/, "");
+    const adrDir = path.resolve(repoRoot, safeRelative);
+    return { repoRoot, adrDir, relativeDir: safeRelative };
+  }
+
+  /**
+   * Projects an ADR record into SourceRecords for evidence retrieval.
+   */
+  private async projectAdrToSourceRecord(
+    repositoryId: string,
+    identifier: string,
+    title: string,
+    markdown: string,
+    filePath: string,
+    recordedAt: Date,
+    decisionId: string,
+    reviewerName?: string | null,
+  ): Promise<void> {
+    try {
+      await this.prisma.sourceRecord.upsert({
+        where: {
+          repositoryId_sourceType_externalId: {
+            repositoryId,
+            sourceType: "ADR" as any,
+            externalId: filePath,
+          },
+        },
+        create: {
+          repositoryId,
+          sourceType: "ADR" as any,
+          externalId: filePath,
+          referenceKey: identifier,
+          title: `ADR: ${title}`,
+          author: reviewerName || "Architecture Review",
+          url: `/decisions?repoId=${repositoryId}&id=${decisionId}`,
+          content: markdown,
+          snippet: markdown.slice(0, 300),
+          filePath,
+          recordedAt,
+        },
+        update: {
+          title: `ADR: ${title}`,
+          content: markdown,
+          snippet: markdown.slice(0, 300),
+          filePath,
+          updatedAt: new Date(),
+        },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Failed to project ADR ${identifier} into SourceRecord: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  /**
+   * Exports an individual decision to a Git-native /docs/adr/*.md file.
+   */
+  async exportDecisionToAdr(
+    workspaceId: string,
+    repositoryId: string,
+    id: string,
+    options?: ExportAdrDto,
+  ): Promise<AdrFileDto> {
+    const adrDto = await this.getDecisionAdr(workspaceId, repositoryId, id);
+    const { adrDir, relativeDir } = this.resolveAdrDirectory(options?.adrDirectory);
+
+    if (!fs.existsSync(adrDir)) {
+      fs.mkdirSync(adrDir, { recursive: true });
+    }
+
+    const targetFilePath = path.join(adrDir, adrDto.fileName);
+    fs.writeFileSync(targetFilePath, adrDto.markdown, "utf-8");
+
+    const relativePath = path.join(relativeDir, adrDto.fileName);
+    await this.projectAdrToSourceRecord(
+      repositoryId,
+      adrDto.identifier,
+      adrDto.title,
+      adrDto.markdown,
+      relativePath,
+      new Date(adrDto.date),
+      id,
+    );
+
+    this.logger.log(`Exported decision ${id} to ${targetFilePath}`);
+    return {
+      ...adrDto,
+      filePath: relativePath,
+    };
+  }
+
+  /**
+   * Exports all decisions of a repository to /docs/adr/*.md files.
+   */
+  async exportAllDecisionsToAdrs(
+    workspaceId: string,
+    repositoryId: string,
+    options?: SyncAdrsDto,
+  ): Promise<AdrSyncResultDto> {
+    const decisions = await this.listDecisions(workspaceId, repositoryId);
+    const { adrDir, relativeDir } = this.resolveAdrDirectory(options?.adrDirectory);
+
+    if (!fs.existsSync(adrDir)) {
+      fs.mkdirSync(adrDir, { recursive: true });
+    }
+
+    const syncedFiles: string[] = [];
+    const errors: string[] = [];
+    let exportedCount = 0;
+
+    for (let i = 0; i < decisions.length; i++) {
+      const decision = decisions[i];
+      try {
+        const sequenceNumber = i + 1;
+        const pad = String(sequenceNumber).padStart(3, "0");
+        const identifier = `ADR-${pad}`;
+        const fileName = generateAdrFileName(sequenceNumber, decision.title);
+        const markdown = formatDecisionToAdrMarkdown(decision, sequenceNumber);
+        const fullPath = path.join(adrDir, fileName);
+        const relPath = path.join(relativeDir, fileName);
+
+        fs.writeFileSync(fullPath, markdown, "utf-8");
+        await this.projectAdrToSourceRecord(
+          repositoryId,
+          identifier,
+          decision.title,
+          markdown,
+          relPath,
+          new Date(decision.reviewedAt || decision.createdAt),
+          decision.id,
+          decision.reviewerName,
+        );
+
+        syncedFiles.push(relPath);
+        exportedCount++;
+      } catch (err) {
+        errors.push(
+          `Failed exporting decision ${decision.id}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    return {
+      totalFilesScanned: decisions.length,
+      exportedCount,
+      importedCount: 0,
+      syncedFiles,
+      errors: errors.length > 0 ? errors : undefined,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Ingests existing /docs/adr/*.md files from disk into EngineeringDecision and SourceRecord models.
+   */
+  async importAdrsFromDocs(
+    workspaceId: string,
+    repositoryId: string,
+    options?: SyncAdrsDto,
+  ): Promise<AdrSyncResultDto> {
+    await this.verifyRepository(workspaceId, repositoryId);
+    const { repoRoot, adrDir, relativeDir } = this.resolveAdrDirectory(options?.adrDirectory);
+
+    const candidateDirs = [adrDir];
+    // Fallback to docs/architecture/ADRs if docs/adr does not exist or is empty
+    const altDir = path.resolve(repoRoot, "docs/architecture/ADRs");
+    if (!fs.existsSync(adrDir) && fs.existsSync(altDir)) {
+      candidateDirs.push(altDir);
+    }
+
+    const filesToProcess: Array<{ fullPath: string; relPath: string }> = [];
+
+    for (const dir of candidateDirs) {
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
+        for (const f of files) {
+          filesToProcess.push({
+            fullPath: path.join(dir, f),
+            relPath: path.relative(repoRoot, path.join(dir, f)),
+          });
+        }
+      }
+    }
+
+    const syncedFiles: string[] = [];
+    const errors: string[] = [];
+    let importedCount = 0;
+
+    for (const item of filesToProcess) {
+      try {
+        const content = fs.readFileSync(item.fullPath, "utf-8");
+        const parsed = parseAdrMarkdownToDecision(content);
+
+        // Check if decision with same title or matching identifier already exists
+        const existing = await this.prisma.engineeringDecision.findFirst({
+          where: {
+            workspaceId,
+            repositoryId,
+            OR: [
+              { title: parsed.title },
+              parsed.createdFromClaimId ? { createdFromClaimId: parsed.createdFromClaimId } : {},
+            ],
+          },
+        });
+
+        let savedRecord: any;
+        if (existing) {
+          savedRecord = await this.prisma.engineeringDecision.update({
+            where: { id: existing.id },
+            data: {
+              summary: parsed.summary,
+              decision: parsed.decision,
+              rationale: parsed.rationale,
+              status: parsed.status as any,
+              severity: parsed.severity as any,
+              targetFilePath: parsed.targetFilePath || existing.targetFilePath,
+              targetSymbol: parsed.targetSymbol || existing.targetSymbol,
+              reviewNotes: parsed.reviewNotes || existing.reviewNotes,
+              supportingEvidence:
+                parsed.supportingEvidence.length > 0
+                  ? (parsed.supportingEvidence as any)
+                  : existing.supportingEvidence,
+            },
+          });
+        } else {
+          savedRecord = await this.prisma.engineeringDecision.create({
+            data: {
+              workspaceId,
+              repositoryId,
+              title: parsed.title,
+              summary: parsed.summary,
+              decision: parsed.decision,
+              rationale: parsed.rationale,
+              status: parsed.status as any,
+              severity: parsed.severity as any,
+              targetFilePath: parsed.targetFilePath || null,
+              targetSymbol: parsed.targetSymbol || null,
+              reviewNotes: parsed.reviewNotes || null,
+              supportingEvidence: (parsed.supportingEvidence as any) || [],
+              reviewerName: parsed.reviewerName || "ADR Importer",
+              reviewedAt: parsed.reviewedAt ? new Date(parsed.reviewedAt) : new Date(),
+              createdFromClaimId: parsed.createdFromClaimId || null,
+            },
+          });
+        }
+
+        // Project into SourceRecords
+        await this.projectAdrToSourceRecord(
+          repositoryId,
+          parsed.identifier || "ADR",
+          parsed.title,
+          content,
+          item.relPath,
+          new Date(),
+          savedRecord.id,
+          savedRecord.reviewerName,
+        );
+
+        syncedFiles.push(item.relPath);
+        importedCount++;
+      } catch (err) {
+        errors.push(
+          `Failed importing ${item.relPath}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    return {
+      totalFilesScanned: filesToProcess.length,
+      exportedCount: 0,
+      importedCount,
+      syncedFiles,
+      errors: errors.length > 0 ? errors : undefined,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Executes bidirectional synchronization between PostgreSQL Decision records and /docs/adr/*.md.
+   */
+  async syncAdrsBidirectional(
+    workspaceId: string,
+    repositoryId: string,
+    options?: SyncAdrsDto,
+  ): Promise<AdrSyncResultDto> {
+    const direction = options?.direction || "BIDIRECTIONAL";
+
+    let importedResult: AdrSyncResultDto = {
+      totalFilesScanned: 0,
+      exportedCount: 0,
+      importedCount: 0,
+      syncedFiles: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    let exportedResult: AdrSyncResultDto = {
+      totalFilesScanned: 0,
+      exportedCount: 0,
+      importedCount: 0,
+      syncedFiles: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    if (direction === "IMPORT" || direction === "BIDIRECTIONAL") {
+      importedResult = await this.importAdrsFromDocs(workspaceId, repositoryId, options);
+    }
+
+    if (direction === "EXPORT" || direction === "BIDIRECTIONAL") {
+      exportedResult = await this.exportAllDecisionsToAdrs(workspaceId, repositoryId, options);
+    }
+
+    const combinedFiles = Array.from(
+      new Set([...importedResult.syncedFiles, ...exportedResult.syncedFiles]),
+    );
+    const combinedErrors = [
+      ...(importedResult.errors || []),
+      ...(exportedResult.errors || []),
+    ];
+
+    return {
+      totalFilesScanned:
+        importedResult.totalFilesScanned + exportedResult.totalFilesScanned,
+      exportedCount: exportedResult.exportedCount,
+      importedCount: importedResult.importedCount,
+      syncedFiles: combinedFiles,
+      errors: combinedErrors.length > 0 ? combinedErrors : undefined,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
 
   private mapDecisionToDto(record: any): EngineeringDecisionDto {
     return {

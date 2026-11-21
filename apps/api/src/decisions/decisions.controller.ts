@@ -21,10 +21,14 @@ import {
   ReviewDecisionDto,
   SupersedeDecisionDto,
   ProposeFromClaimDto,
+  SyncAdrsDto,
+  ExportAdrDto,
 } from "./decisions.dto";
 import {
   DecisionStatus,
   EngineeringDecisionDto,
+  AdrFileDto,
+  AdrSyncResultDto,
 } from "@traceback/shared-types";
 
 @Controller("workspaces/:workspaceId/repositories/:repositoryId/decisions")
@@ -53,6 +57,32 @@ export class DecisionsController {
   ): Promise<EngineeringDecisionDto> {
     return this.decisionsService.getDecisionById(workspaceId, repositoryId, id);
   }
+
+  @Get(":id/adr")
+  async getDecisionAdr(
+    @Param("workspaceId") workspaceId: string,
+    @Param("repositoryId") repositoryId: string,
+    @Param("id") id: string,
+  ): Promise<AdrFileDto> {
+    return this.decisionsService.getDecisionAdr(workspaceId, repositoryId, id);
+  }
+
+  @Post(":id/export-adr")
+  @HttpCode(HttpStatus.OK)
+  async exportDecisionAdr(
+    @Param("workspaceId") workspaceId: string,
+    @Param("repositoryId") repositoryId: string,
+    @Param("id") id: string,
+    @Body() dto: ExportAdrDto,
+  ): Promise<AdrFileDto> {
+    return this.decisionsService.exportDecisionToAdr(
+      workspaceId,
+      repositoryId,
+      id,
+      dto,
+    );
+  }
+
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -85,6 +115,49 @@ export class DecisionsController {
       user,
     );
   }
+
+  @Post("sync-adrs")
+  @HttpCode(HttpStatus.OK)
+  async syncAdrs(
+    @Param("workspaceId") workspaceId: string,
+    @Param("repositoryId") repositoryId: string,
+    @Body() dto: SyncAdrsDto,
+  ): Promise<AdrSyncResultDto> {
+    return this.decisionsService.syncAdrsBidirectional(
+      workspaceId,
+      repositoryId,
+      dto,
+    );
+  }
+
+  @Post("import-adrs")
+  @HttpCode(HttpStatus.OK)
+  async importAdrs(
+    @Param("workspaceId") workspaceId: string,
+    @Param("repositoryId") repositoryId: string,
+    @Body() dto: SyncAdrsDto,
+  ): Promise<AdrSyncResultDto> {
+    return this.decisionsService.importAdrsFromDocs(
+      workspaceId,
+      repositoryId,
+      dto,
+    );
+  }
+
+  @Post("export-all-adrs")
+  @HttpCode(HttpStatus.OK)
+  async exportAllAdrs(
+    @Param("workspaceId") workspaceId: string,
+    @Param("repositoryId") repositoryId: string,
+    @Body() dto: SyncAdrsDto,
+  ): Promise<AdrSyncResultDto> {
+    return this.decisionsService.exportAllDecisionsToAdrs(
+      workspaceId,
+      repositoryId,
+      dto,
+    );
+  }
+
 
   @Patch(":id")
   async updateDecision(
