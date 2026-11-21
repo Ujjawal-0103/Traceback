@@ -10,6 +10,7 @@ import {
   HumanVerdict,
   TracebackReportExport,
 } from "@traceback/shared-types";
+import { PromoteToDecisionModal } from "../../components/decisions/PromoteToDecisionModal";
 
 interface ValidatedEvidence {
   sourceType: string;
@@ -1526,6 +1527,18 @@ function VerifyWorkspaceContent() {
                             : "🏛️ Propose Decision Candidate"}
                         </button>
                       )}
+
+                      {/* Promote to Decision Loop */}
+                      <PromoteToDecisionModal
+                        claimId={assessment.claimId}
+                        sessionId={result.sessionId}
+                        repositoryId={selectedRepoId}
+                        claimText={assessment.claimText}
+                        targetSymbol={assessment.targetSymbol}
+                        targetFilePath={result.targetFilePath}
+                        explanation={result.explanation}
+                        evidence={assessment.allValidatedEvidence}
+                      />
                     </div>
 
                     {/* Audit Trail Drawer */}

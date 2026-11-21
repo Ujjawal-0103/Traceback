@@ -768,3 +768,78 @@ export interface RecordIntentDispositionDto {
   disposition: HumanDisposition;
   notes?: string;
 }
+
+// ============================================================================
+// Sprint 11: Promote Verification Claim to Engineering Decision
+// ============================================================================
+
+export interface PromoteClaimToDecisionRequest {
+  claimId?: string;
+  verificationSessionId?: string;
+  repositoryId: string;
+  title?: string;
+  summary?: string;
+  decision?: string;
+  rationale?: string;
+  severity?: DecisionSeverity;
+  targetFilePath?: string;
+  targetSymbol?: string;
+}
+
+export interface PromoteClaimToDecisionResponse {
+  decisionId: string;
+  id: string;
+  workspaceId: string;
+  repositoryId: string;
+  title: string;
+  summary: string;
+  decision: string;
+  rationale: string;
+  targetFilePath?: string | null;
+  targetSymbol?: string | null;
+  status: DecisionStatus;
+  severity: DecisionSeverity;
+  supportingEvidence: EvidenceReference[];
+  relatedCommitSha?: string | null;
+  relatedPrNumber?: number | null;
+  createdFromClaimId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// Sprint 11: ADR Sync Engine (Bidirectional Markdown Sync)
+// ============================================================================
+
+export interface AdrFileSummary {
+  fileName: string;
+  filePath: string;
+  title: string;
+  identifier?: string;
+  status: string;
+  date?: string;
+  matchedDecisionId?: string | null;
+  matchedDecisionStatus?: DecisionStatus | null;
+  existsInDatabase: boolean;
+}
+
+export interface AdrSyncImportResponse {
+  workspaceId: string;
+  repositoryId?: string;
+  totalFilesScanned: number;
+  importedCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  decisions: EngineeringDecisionDto[];
+  files: AdrFileSummary[];
+}
+
+export interface AdrSyncExportResponse {
+  decisionId: string;
+  fileName: string;
+  filePath: string;
+  status: DecisionStatus;
+  title: string;
+  writtenBytes: number;
+  content: string;
+}
