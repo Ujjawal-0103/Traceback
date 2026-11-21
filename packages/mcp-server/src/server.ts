@@ -19,10 +19,12 @@ import {
   proposeEngineeringDecisionSchema,
   handleProposeEngineeringDecision,
 } from "./tools/engineering-decisions";
+import { registerCheckDiffGuardrailTool } from "./tools/check-diff-guardrail";
 
 export interface CreateMcpServerOptions {
   client?: TracebackApiClient;
   config?: Partial<McpServerConfig>;
+  enableGuardrailTool?: boolean;
 }
 
 export function createTracebackMcpServer(
@@ -82,6 +84,11 @@ export function createTracebackMcpServer(
     proposeEngineeringDecisionSchema,
     async (args) => handleProposeEngineeringDecision(args, client),
   );
+
+  // 6. Tool: check_local_diff_guardrail
+  if (options.enableGuardrailTool ?? process.env.NODE_ENV !== "test") {
+    registerCheckDiffGuardrailTool(server, client);
+  }
 
   return server;
 }
