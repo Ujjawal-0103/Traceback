@@ -12,6 +12,7 @@ import {
   DecisionSeverity,
   DecisionStatus,
 } from "@traceback/shared-types";
+import { PromoteToDecisionModal } from "../../components/decisions/PromoteToDecisionModal";
 
 interface ValidatedEvidence {
   sourceType: string;
@@ -1638,6 +1639,18 @@ function VerifyWorkspaceContent() {
                           🏛️ Promote to Decision
                         </button>
                       )}
+
+                      {/* Promote to Decision Loop */}
+                      <PromoteToDecisionModal
+                        claimId={assessment.claimId}
+                        sessionId={result.sessionId}
+                        repositoryId={selectedRepoId}
+                        claimText={assessment.claimText}
+                        targetSymbol={assessment.targetSymbol}
+                        targetFilePath={result.targetFilePath}
+                        explanation={result.explanation}
+                        evidence={assessment.allValidatedEvidence}
+                      />
                     </div>
 
                     {/* Audit Trail Drawer */}
