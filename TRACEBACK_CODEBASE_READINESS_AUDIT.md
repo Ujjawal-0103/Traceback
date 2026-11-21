@@ -14,6 +14,7 @@
 A comprehensive, non-mutating technical audit was conducted across the **Traceback** codebase to verify architectural integrity, toolchain compatibility, dependency resolution, database configuration, service connectivity, and workflow readiness.
 
 ### Key Audit Conclusions:
+
 1. **Monorepo Architecture:** The Turborepo structure is fully aligned and functional across all applications (`@traceback/web`, `@traceback/api`) and packages (`@traceback/shared-types`, `@traceback/mcp-server`).
 2. **Toolchain & Binaries:** All 15 required developer tools and CLIs are verified and functional. Project-local `.bin` executables (`turbo`, `nest`, `next`, `jest`, `tsc`, `prisma`) resolve cleanly without path errors.
 3. **Database & Cache Health:** PostgreSQL 16 (host port `5434`) and Redis 7 (port `6379`) Docker containers are running healthy. All 6 Prisma migrations are applied and the database schema is synchronized.
@@ -62,6 +63,7 @@ Traceback/
 ```
 
 ### Application Entry Points
+
 - **Backend API:** `apps/api/src/main.ts` -> Boots NestJS on `http://127.0.0.1:3001/api` with validation pipes, correlation ID middleware, security headers, and global exception filters.
 - **Frontend Web:** `apps/web/src/app/layout.tsx` -> Boots Next.js 14 App Router on `http://localhost:3000` with anti-flash light mode script, `ThemeProvider`, `AuthProvider`, and `RouteGuard`.
 - **MCP Server:** `packages/mcp-server/src/bin/cli.ts` -> Connects stdio JSON-RPC transport with logging routed safely to stderr to prevent protocol corruption.
@@ -70,23 +72,23 @@ Traceback/
 
 ## 3. Toolchain Verification
 
-| Tool | Required Version | Installed Version | Location | PATH Config | Functional |
-| :--- | :--- | :--- | :--- | :---: | :---: |
-| **Node.js** | `>= 20.0.0` | `v24.20.0` | `C:\Program Files\nodejs\node.exe` | Valid | **Yes** |
-| **npm** | `>= 10.0.0` | `11.19.0` | `C:\Program Files\nodejs\npm.cmd` | Valid | **Yes** |
-| **npx** | `>= 10.0.0` | `11.19.0` | `C:\Program Files\nodejs\npx.cmd` | Valid | **Yes** |
-| **pnpm** | Optional | `9.15.9` | `C:\Users\Asus\AppData\Roaming\npm\pnpm.cmd` | Valid | **Yes** |
-| **Git** | Any modern | `2.54.0.windows.1` | `C:\Program Files\Git\cmd\git.exe` | Valid | **Yes** |
-| **TypeScript** | `^5.7.3` | `5.9.3` / `5.7.3` | `node_modules/.bin/tsc.cmd` | Project-Local | **Yes** |
-| **Turbo** | `^2.4.4` | `2.11.7` | `node_modules/.bin/turbo.cmd` | Project-Local | **Yes** |
-| **NestJS CLI** | `^10.4.9` | `10.4.9` | `apps/api/node_modules/.bin/nest.cmd` | Project-Local | **Yes** |
-| **Next.js** | `^14.2.24` | `14.2.35` | `apps/web/node_modules/.bin/next.cmd` | Project-Local | **Yes** |
-| **Prisma CLI** | `^6.4.1` | `6.19.3` | `node_modules/.bin/prisma.cmd` | Project-Local | **Yes** |
-| **Docker** | Engine 20+ | `29.8.2` | `C:\Users\Asus\AppData\Local\Programs\DockerDesktop\...\docker.exe` | Valid | **Yes** |
-| **Docker Compose** | Compose v2+ | `v5.5.1` | `C:\Users\Asus\AppData\Local\Programs\DockerDesktop\...\docker-compose.exe`| Valid | **Yes** |
-| **PostgreSQL** | `16` | `16-alpine` (Docker) / `18.6` (Native) | Docker port `5434` / `C:\Program Files\PostgreSQL\18\bin` | Valid | **Yes** |
-| **psql** | Any modern | `18.6` | `C:\Program Files\PostgreSQL\18\bin\psql.exe` | Valid | **Yes** |
-| **Redis** | `7` | `7-alpine` (Docker) | Docker port `6379` | Valid | **Yes** |
+| Tool               | Required Version | Installed Version                      | Location                                                                    |  PATH Config  | Functional |
+| :----------------- | :--------------- | :------------------------------------- | :-------------------------------------------------------------------------- | :-----------: | :--------: |
+| **Node.js**        | `>= 20.0.0`      | `v24.20.0`                             | `C:\Program Files\nodejs\node.exe`                                          |     Valid     |  **Yes**   |
+| **npm**            | `>= 10.0.0`      | `11.19.0`                              | `C:\Program Files\nodejs\npm.cmd`                                           |     Valid     |  **Yes**   |
+| **npx**            | `>= 10.0.0`      | `11.19.0`                              | `C:\Program Files\nodejs\npx.cmd`                                           |     Valid     |  **Yes**   |
+| **pnpm**           | Optional         | `9.15.9`                               | `C:\Users\Asus\AppData\Roaming\npm\pnpm.cmd`                                |     Valid     |  **Yes**   |
+| **Git**            | Any modern       | `2.54.0.windows.1`                     | `C:\Program Files\Git\cmd\git.exe`                                          |     Valid     |  **Yes**   |
+| **TypeScript**     | `^5.7.3`         | `5.9.3` / `5.7.3`                      | `node_modules/.bin/tsc.cmd`                                                 | Project-Local |  **Yes**   |
+| **Turbo**          | `^2.4.4`         | `2.11.7`                               | `node_modules/.bin/turbo.cmd`                                               | Project-Local |  **Yes**   |
+| **NestJS CLI**     | `^10.4.9`        | `10.4.9`                               | `apps/api/node_modules/.bin/nest.cmd`                                       | Project-Local |  **Yes**   |
+| **Next.js**        | `^14.2.24`       | `14.2.35`                              | `apps/web/node_modules/.bin/next.cmd`                                       | Project-Local |  **Yes**   |
+| **Prisma CLI**     | `^6.4.1`         | `6.19.3`                               | `node_modules/.bin/prisma.cmd`                                              | Project-Local |  **Yes**   |
+| **Docker**         | Engine 20+       | `29.8.2`                               | `C:\Users\Asus\AppData\Local\Programs\DockerDesktop\...\docker.exe`         |     Valid     |  **Yes**   |
+| **Docker Compose** | Compose v2+      | `v5.5.1`                               | `C:\Users\Asus\AppData\Local\Programs\DockerDesktop\...\docker-compose.exe` |     Valid     |  **Yes**   |
+| **PostgreSQL**     | `16`             | `16-alpine` (Docker) / `18.6` (Native) | Docker port `5434` / `C:\Program Files\PostgreSQL\18\bin`                   |     Valid     |  **Yes**   |
+| **psql**           | Any modern       | `18.6`                                 | `C:\Program Files\PostgreSQL\18\bin\psql.exe`                               |     Valid     |  **Yes**   |
+| **Redis**          | `7`              | `7-alpine` (Docker)                    | Docker port `6379`                                                          |     Valid     |  **Yes**   |
 
 ---
 
@@ -191,7 +193,7 @@ Traceback/
 - **Dual Mode Operation:**
   - **Live Mode:** Enabled when `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, and `GITHUB_WEBHOOK_SECRET` are configured.
   - **Sandbox Mock Mode:** Automatically active when credentials are omitted. Uses `MockGitHubClient` and `MockGitHubIngestionAdapter` for deterministic local development and evaluation without external network dependencies.
-- **Status:** **READY WITH WARNINGS** *(Sandbox mock mode active; live credentials optional)*
+- **Status:** **READY WITH WARNINGS** _(Sandbox mock mode active; live credentials optional)_
 
 ---
 
@@ -211,16 +213,16 @@ Traceback/
 
 ## 12. Testing & Build Readiness
 
-| Test / Build Pipeline | Command | Result | Verification Evidence |
-| :--- | :--- | :---: | :--- |
-| **TypeScript Typecheck** | `turbo run typecheck` | **PASS** | 5/5 tasks successful across all workspaces |
-| **ESLint Code Quality** | `turbo run lint` | **PASS** | 0 errors, 0 warnings across all workspaces |
-| **Production Build** | `turbo run build` | **PASS** | 5/5 tasks successful; 15/15 static Next.js pages generated |
-| **Backend Unit Tests** | `npm run test:unit --workspace=@traceback/api` | **PASS** | 44/44 test suites passed |
-| **Backend Integration Tests** | `npm run test:integration --workspace=@traceback/api` | **PASS** | 5/5 live database tests passed |
-| **Frontend Unit Tests** | `npm test --workspace=@traceback/web` | **PASS** | 13/13 test suites passed (65/65 tests) |
-| **MCP Protocol Tests** | `npm test --workspace=@traceback/mcp-server` | **PASS** | 1/1 test suite passed (24/24 tests) |
-| **Monorepo Test Suite** | `turbo run test` | **PASS** | **58/58 test suites passed (505/505 tests, 0 failures)** |
+| Test / Build Pipeline         | Command                                               |  Result  | Verification Evidence                                      |
+| :---------------------------- | :---------------------------------------------------- | :------: | :--------------------------------------------------------- |
+| **TypeScript Typecheck**      | `turbo run typecheck`                                 | **PASS** | 5/5 tasks successful across all workspaces                 |
+| **ESLint Code Quality**       | `turbo run lint`                                      | **PASS** | 0 errors, 0 warnings across all workspaces                 |
+| **Production Build**          | `turbo run build`                                     | **PASS** | 5/5 tasks successful; 15/15 static Next.js pages generated |
+| **Backend Unit Tests**        | `npm run test:unit --workspace=@traceback/api`        | **PASS** | 44/44 test suites passed                                   |
+| **Backend Integration Tests** | `npm run test:integration --workspace=@traceback/api` | **PASS** | 5/5 live database tests passed                             |
+| **Frontend Unit Tests**       | `npm test --workspace=@traceback/web`                 | **PASS** | 13/13 test suites passed (65/65 tests)                     |
+| **MCP Protocol Tests**        | `npm test --workspace=@traceback/mcp-server`          | **PASS** | 1/1 test suite passed (24/24 tests)                        |
+| **Monorepo Test Suite**       | `turbo run test`                                      | **PASS** | **58/58 test suites passed (505/505 tests, 0 failures)**   |
 
 ---
 
@@ -240,33 +242,36 @@ Traceback/
 
 ## 14. Development Workflow Readiness Matrix
 
-| Workflow | Classification | Details |
-| :--- | :---: | :--- |
-| **1. Dependency Installation** | **READY** | `package-lock.json` reproducible across all workspaces. |
-| **2. Frontend Startup** | **READY** | Next.js 14 dev server starts in ~2.2s on `http://localhost:3000`. |
-| **3. Backend Startup** | **READY** | NestJS dev server starts cleanly on `http://localhost:3001/api`. |
-| **4. Shared Package Build** | **READY** | `npm run build --workspace=@traceback/shared-types` emits clean distributions. |
-| **5. PostgreSQL Connectivity** | **READY** | Containerized PostgreSQL 16 on port `5434` is healthy and responsive. |
-| **6. Redis Connectivity** | **READY** | Containerized Redis 7 on port `6379` is healthy. |
-| **7. Prisma Operations** | **READY** | Schema is valid, client is generated, migrations are up to date. |
-| **8. Unit Testing** | **READY** | 500+ unit tests across Web, API, and MCP execute cleanly. |
-| **9. Integration Testing** | **READY** | Live database integration test passes. |
-| **10. Production Builds** | **READY** | `turbo run build` compiles full production outputs for all packages. |
-| **11. MCP Server Startup** | **READY** | CLI executable `traceback-mcp` is ready for IDE/tool integration. |
-| **12. GitHub Integration** | **READY WITH WARNINGS** | Operational in Sandbox Mock mode; live credentials optional. |
+| Workflow                       |     Classification      | Details                                                                        |
+| :----------------------------- | :---------------------: | :----------------------------------------------------------------------------- |
+| **1. Dependency Installation** |        **READY**        | `package-lock.json` reproducible across all workspaces.                        |
+| **2. Frontend Startup**        |        **READY**        | Next.js 14 dev server starts in ~2.2s on `http://localhost:3000`.              |
+| **3. Backend Startup**         |        **READY**        | NestJS dev server starts cleanly on `http://localhost:3001/api`.               |
+| **4. Shared Package Build**    |        **READY**        | `npm run build --workspace=@traceback/shared-types` emits clean distributions. |
+| **5. PostgreSQL Connectivity** |        **READY**        | Containerized PostgreSQL 16 on port `5434` is healthy and responsive.          |
+| **6. Redis Connectivity**      |        **READY**        | Containerized Redis 7 on port `6379` is healthy.                               |
+| **7. Prisma Operations**       |        **READY**        | Schema is valid, client is generated, migrations are up to date.               |
+| **8. Unit Testing**            |        **READY**        | 500+ unit tests across Web, API, and MCP execute cleanly.                      |
+| **9. Integration Testing**     |        **READY**        | Live database integration test passes.                                         |
+| **10. Production Builds**      |        **READY**        | `turbo run build` compiles full production outputs for all packages.           |
+| **11. MCP Server Startup**     |        **READY**        | CLI executable `traceback-mcp` is ready for IDE/tool integration.              |
+| **12. GitHub Integration**     | **READY WITH WARNINGS** | Operational in Sandbox Mock mode; live credentials optional.                   |
 
 ---
 
 ## 15. Missing Components, Critical Blockers & Warnings
 
 ### Critical Blockers
+
 - **NONE.** The codebase has zero blocking technical defects or broken builds.
 
 ### Warnings (Informational)
+
 1. **GitHub Live Credentials (Optional):** Live GitHub App credentials (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_WEBHOOK_SECRET`) are not configured in `.env`. Traceback operates in **Sandbox Mock Mode**, which is intended for local hackathon evaluation.
 2. **LLM Provider API Keys (Optional):** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GEMINI_API_KEY` are blank in `.env`. Traceback uses deterministic heuristic extraction and mock claim grounding when LLM keys are absent.
 
 ### Recommended Actions for Continued Development
+
 1. Start development using `npm run dev` to launch both Frontend and Backend concurrently.
 2. If live GitHub repository syncing is desired, configure GitHub App credentials in `.env`.
 3. If live LLM claim extraction is desired, add an API key (Gemini, OpenAI, or Anthropic) in `.env`.
@@ -275,14 +280,14 @@ Traceback/
 
 ## 16. Overall Readiness Score: 98 / 100
 
-| Dimension | Weight | Score | Comments |
-| :--- | :---: | :---: | :--- |
-| **Monorepo & Package Architecture** | 20% | 20 / 20 | Turborepo and workspace linking are pristine. |
-| **Toolchain & Dependency Resolution** | 20% | 20 / 20 | All tools, node_modules, and binaries resolved. |
-| **Database & Service Connectivity** | 20% | 20 / 20 | PostgreSQL 16 and Redis 7 healthy; migrations current. |
-| **Test Coverage & Production Build** | 20% | 20 / 20 | 505/505 tests pass; production build succeeds. |
-| **Integrations (GitHub, MCP, LLM)** | 20% | 18 / 20 | MCP server 100%; GitHub & LLM in sandbox mock mode. |
-| **Total Score** | **100%** | **98 / 100** | **GRADE: PRODUCTION-READY (A+)** |
+| Dimension                             |  Weight  |    Score     | Comments                                               |
+| :------------------------------------ | :------: | :----------: | :----------------------------------------------------- |
+| **Monorepo & Package Architecture**   |   20%    |   20 / 20    | Turborepo and workspace linking are pristine.          |
+| **Toolchain & Dependency Resolution** |   20%    |   20 / 20    | All tools, node_modules, and binaries resolved.        |
+| **Database & Service Connectivity**   |   20%    |   20 / 20    | PostgreSQL 16 and Redis 7 healthy; migrations current. |
+| **Test Coverage & Production Build**  |   20%    |   20 / 20    | 505/505 tests pass; production build succeeds.         |
+| **Integrations (GitHub, MCP, LLM)**   |   20%    |   18 / 20    | MCP server 100%; GitHub & LLM in sandbox mock mode.    |
+| **Total Score**                       | **100%** | **98 / 100** | **GRADE: PRODUCTION-READY (A+)**                       |
 
 ---
 

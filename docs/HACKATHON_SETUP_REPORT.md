@@ -4,7 +4,7 @@
 **Operating System:** Windows 11  
 **Repository Path:** `C:\Users\Asus\Videos\VScodefiles\Pro\Traceback`  
 **Git Branch:** `main` (Clean working tree, up to date with `origin/main`)  
-**Setup Status:** **READY**  
+**Setup Status:** **READY**
 
 ---
 
@@ -33,17 +33,17 @@ Traceback/
 
 ## 2. Environment & Software Versions
 
-| Component | Detected Version | Minimum Required | Status |
-| :--- | :--- | :--- | :--- |
-| **Node.js** | `v24.20.0` | `>= 20.0.0` | **MATCH / SATISFIED** |
-| **npm** | `11.19.0` | `>= 10.0.0` | **MATCH / SATISFIED** |
-| **Turborepo** | `v2.11.7` | `^2.4.4` | **MATCH / SATISFIED** |
-| **TypeScript** | `v5.7.3` | `^5.7.3` | **MATCH / SATISFIED** |
-| **Prisma CLI / Client** | `v6.19.3` / `v6.4.1` | `^6.4.1` | **MATCH / SATISFIED** |
-| **Docker Desktop** | `v29.8.2` | Any Docker Desktop | **MATCH / RUNNING** |
-| **Docker Compose** | `v5.5.1` | Compose v2+ | **MATCH / SATISFIED** |
-| **PostgreSQL** | `16-alpine` | `16` | **HEALTHY (`localhost:5434`)** |
-| **Redis** | `7-alpine` | `7` | **HEALTHY (`localhost:6379`)** |
+| Component               | Detected Version     | Minimum Required   | Status                         |
+| :---------------------- | :------------------- | :----------------- | :----------------------------- |
+| **Node.js**             | `v24.20.0`           | `>= 20.0.0`        | **MATCH / SATISFIED**          |
+| **npm**                 | `11.19.0`            | `>= 10.0.0`        | **MATCH / SATISFIED**          |
+| **Turborepo**           | `v2.11.7`            | `^2.4.4`           | **MATCH / SATISFIED**          |
+| **TypeScript**          | `v5.7.3`             | `^5.7.3`           | **MATCH / SATISFIED**          |
+| **Prisma CLI / Client** | `v6.19.3` / `v6.4.1` | `^6.4.1`           | **MATCH / SATISFIED**          |
+| **Docker Desktop**      | `v29.8.2`            | Any Docker Desktop | **MATCH / RUNNING**            |
+| **Docker Compose**      | `v5.5.1`             | Compose v2+        | **MATCH / SATISFIED**          |
+| **PostgreSQL**          | `16-alpine`          | `16`               | **HEALTHY (`localhost:5434`)** |
+| **Redis**               | `7-alpine`           | `7`                | **HEALTHY (`localhost:6379`)** |
 
 ---
 
@@ -75,6 +75,7 @@ The following environment configuration files were generated from canonical temp
    - Configures `NEXT_PUBLIC_API_URL=http://127.0.0.1:3001/api`.
 
 **Git Secret Protection Verification:**
+
 - Verified `.gitignore` contains rules for `.env`, `.env.local`, `*.pem`, `*.key`.
 - Ran `git status`: Working tree is clean and none of the created environment files or secrets are tracked or exposed.
 
@@ -122,37 +123,37 @@ The following environment configuration files were generated from canonical temp
 
 ## 8. Test Results Matrix
 
-| Workspace / Target | Check Type | Command Executed | Result | Details |
-| :--- | :--- | :--- | :--- | :--- |
-| **All Workspaces** | TypeScript Typecheck | `turbo run typecheck` | **PASS** | 5/5 tasks successful across all 4 packages |
-| **All Workspaces** | ESLint Code Quality | `turbo run lint` | **PASS** | 0 errors, 0 warnings |
-| **All Workspaces** | Production Build | `turbo run build` | **PASS** | 5/5 tasks successful; 15/15 static pages optimized |
-| **`@traceback/api`** | Unit Test Suites | `npm run test:unit --workspace=@traceback/api` | **PASS** | All unit suites passed |
-| **`@traceback/api`** | DB Integration Tests | `npm run test:integration --workspace=@traceback/api` | **PASS** | 5/5 live database tests passed |
-| **`@traceback/api`** | Full API Test Suite | `npm test --workspace=@traceback/api` | **PASS** | 44/44 test suites passed (416/416 tests passed) |
-| **`@traceback/web`** | Frontend Test Suite | `npm test --workspace=@traceback/web` | **PASS** | 13/13 test suites passed (65/65 tests passed) |
-| **`@traceback/mcp-server`** | Protocol & Adversarial Tests | `npm test --workspace=@traceback/mcp-server` | **PASS** | 1/1 test suite passed (24/24 tests passed) |
-| **Monorepo Total** | All Tests | `turbo run test` | **PASS** | **58/58 test suites passed (505/505 tests passed, 0 failures)** |
+| Workspace / Target          | Check Type                   | Command Executed                                      | Result   | Details                                                         |
+| :-------------------------- | :--------------------------- | :---------------------------------------------------- | :------- | :-------------------------------------------------------------- |
+| **All Workspaces**          | TypeScript Typecheck         | `turbo run typecheck`                                 | **PASS** | 5/5 tasks successful across all 4 packages                      |
+| **All Workspaces**          | ESLint Code Quality          | `turbo run lint`                                      | **PASS** | 0 errors, 0 warnings                                            |
+| **All Workspaces**          | Production Build             | `turbo run build`                                     | **PASS** | 5/5 tasks successful; 15/15 static pages optimized              |
+| **`@traceback/api`**        | Unit Test Suites             | `npm run test:unit --workspace=@traceback/api`        | **PASS** | All unit suites passed                                          |
+| **`@traceback/api`**        | DB Integration Tests         | `npm run test:integration --workspace=@traceback/api` | **PASS** | 5/5 live database tests passed                                  |
+| **`@traceback/api`**        | Full API Test Suite          | `npm test --workspace=@traceback/api`                 | **PASS** | 44/44 test suites passed (416/416 tests passed)                 |
+| **`@traceback/web`**        | Frontend Test Suite          | `npm test --workspace=@traceback/web`                 | **PASS** | 13/13 test suites passed (65/65 tests passed)                   |
+| **`@traceback/mcp-server`** | Protocol & Adversarial Tests | `npm test --workspace=@traceback/mcp-server`          | **PASS** | 1/1 test suite passed (24/24 tests passed)                      |
+| **Monorepo Total**          | All Tests                    | `turbo run test`                                      | **PASS** | **58/58 test suites passed (505/505 tests passed, 0 failures)** |
 
 ---
 
 ## 9. Errors Encountered & Safe Fixes Applied
 
 1. **Error: Missing `DATABASE_URL` during Prisma schema validation**
-   - *Cause:* Local `.env` files had not yet been created from `.env.example`.
-   - *Fix:* Created root `.env`, `apps/api/.env`, and `apps/web/.env.local` based on canonical development templates without fabricating credentials.
+   - _Cause:_ Local `.env` files had not yet been created from `.env.example`.
+   - _Fix:_ Created root `.env`, `apps/api/.env`, and `apps/web/.env.local` based on canonical development templates without fabricating credentials.
 2. **Error: Prisma engine download blocked (`binaries.prisma.sh getaddrinfo ENOTFOUND`)**
-   - *Cause:* npm install-scripts for Prisma require query engine binary download for Windows.
-   - *Fix:* Executed `npm run prisma:generate` with network approval to download and place `query_engine.dll.node` into `node_modules/@prisma/client`.
+   - _Cause:_ npm install-scripts for Prisma require query engine binary download for Windows.
+   - _Fix:_ Executed `npm run prisma:generate` with network approval to download and place `query_engine.dll.node` into `node_modules/@prisma/client`.
 3. **Error: TypeScript typecheck failure (`Cannot find module '@traceback/shared-types'`)**
-   - *Cause:* Workspaces `@traceback/web`, `@traceback/api`, and `@traceback/mcp-server` import domain contracts from `@traceback/shared-types/dist`, which had not yet been compiled.
-   - *Fix:* Ran `npm run build --workspace=@traceback/shared-types` (`tsc -b`). Subsequent typechecks passed with 0 errors across all workspaces.
+   - _Cause:_ Workspaces `@traceback/web`, `@traceback/api`, and `@traceback/mcp-server` import domain contracts from `@traceback/shared-types/dist`, which had not yet been compiled.
+   - _Fix:_ Ran `npm run build --workspace=@traceback/shared-types` (`tsc -b`). Subsequent typechecks passed with 0 errors across all workspaces.
 4. **Error: Docker daemon unavailable (`open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`)**
-   - *Cause:* Docker Desktop was installed but not running in memory.
-   - *Fix:* Started `Docker Desktop.exe`. Verified `traceback-postgres` and `traceback-redis` containers reached `Up (healthy)` state.
+   - _Cause:_ Docker Desktop was installed but not running in memory.
+   - _Fix:_ Started `Docker Desktop.exe`. Verified `traceback-postgres` and `traceback-redis` containers reached `Up (healthy)` state.
 5. **Error: Unapplied migrations (`sprint_9_password_reset`, `sprint_10_decision_memory_and_intent`)**
-   - *Cause:* Migrations were committed in the repository but pending deployment on the development database.
-   - *Fix:* Executed non-destructive `npm run prisma:migrate:deploy`. Both migrations were applied cleanly. Database schema is now fully synchronized.
+   - _Cause:_ Migrations were committed in the repository but pending deployment on the development database.
+   - _Fix:_ Executed non-destructive `npm run prisma:migrate:deploy`. Both migrations were applied cleanly. Database schema is now fully synchronized.
 
 ---
 
@@ -177,20 +178,25 @@ The project is **100% operational in development and sandbox mode** out-of-the-b
 ## 11. Exact Commands to Start the Project During the Hackathon
 
 ### Step 1: Ensure Docker Desktop & Database Containers are Running
+
 ```powershell
 # Open Docker Desktop if it is not open, then start the containers:
 docker compose up -d postgres redis
 ```
 
 ### Step 2: Start Full Stack Concurrently (Frontend + Backend)
+
 From the project root (`C:\Users\Asus\Videos\VScodefiles\Pro\Traceback`):
+
 ```powershell
 npm run dev
 ```
+
 - **Web UI:** [http://localhost:3000](http://localhost:3000)
 - **API Server:** [http://localhost:3001/api](http://localhost:3001/api)
 
 ### Alternative: Start Individual Services in Separate Terminals
+
 ```powershell
 # Terminal 1 — Backend API
 npm run dev --workspace=@traceback/api
@@ -203,6 +209,7 @@ npm run start --workspace=@traceback/mcp-server
 ```
 
 ### Verification & Testing Commands
+
 ```powershell
 # Run all tests across the entire repository
 npm test
@@ -227,4 +234,3 @@ npm run build
 - **Remote Status:** Up to date with `origin/main`
 - **Working Tree:** Clean (no untracked source files; `.env`, `.env.local`, and build artifacts are properly protected by `.gitignore`)
 - **Preservation:** All original commits, branches, and application files remain untouched and preserved.
-
