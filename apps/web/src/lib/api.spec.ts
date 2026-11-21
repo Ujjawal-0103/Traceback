@@ -113,7 +113,9 @@ describe("Web API Client (apps/web/src/lib/api.ts)", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringMatching(/\/repositories\/repo_1\/decisions\/propose-from-claim$/),
+      expect.stringMatching(
+        /\/repositories\/repo_1\/decisions\/propose-from-claim$/,
+      ),
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
@@ -127,7 +129,12 @@ describe("Web API Client (apps/web/src/lib/api.ts)", () => {
   });
 
   it("should request bidirectional ADR sync", async () => {
-    const mockSyncResult = { totalFilesScanned: 1, exportedCount: 1, importedCount: 0, syncedFiles: [] };
+    const mockSyncResult = {
+      totalFilesScanned: 1,
+      exportedCount: 1,
+      importedCount: 0,
+      syncedFiles: [],
+    };
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue(mockSyncResult),
@@ -143,4 +150,3 @@ describe("Web API Client (apps/web/src/lib/api.ts)", () => {
     expect(result.totalFilesScanned).toBe(1);
   });
 });
-

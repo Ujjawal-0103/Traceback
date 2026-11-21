@@ -2,7 +2,7 @@
 
 > **Module:** Architecture Governance & Decision Memory  
 > **Status:** Production Ready & Hardened  
-> **Last Verified:** 2026-11-22  
+> **Last Verified:** 2026-11-22
 
 ---
 
@@ -13,6 +13,7 @@ In fast-moving codebases, developers frequently encounter architectural constrai
 Furthermore, engineering teams require decisions to live where code lives: as Git-native Markdown Architecture Decision Records (`/docs/adr/*.md`).
 
 Feature 4 implements:
+
 1. **One-Click Promotion:** Directly promote verified claims from `/verify` into candidate decisions with prepopulated draft fields and attached evidence citations.
 2. **Human Governance & Review Attribution:** Decouple AI assessment from human decisions; candidate decisions require explicit human review and mandatory review notes before transition to `ACCEPTED`.
 3. **Bidirectional `/docs/adr/*.md` Sync:** Automatically export accepted/candidate decisions to standard ADR Markdown format and import repository ADR files into PostgreSQL with duplicate prevention.
@@ -92,10 +93,11 @@ Feature 4 implements:
 ## 4. Human Approval Process & Governance
 
 Per Traceback Core Operating Principles (`AGENTS.md`), **AI suggestions must strictly remain distinguishable from human verdicts**:
+
 - An AI assessment (even with high preliminary confidence) does not automatically accept a decision.
 - Only authenticated users with workspace memberships (`OWNER`, `ADMIN`, `MEMBER`) can accept or reject candidate decisions.
 - Users with the `VIEWER` role are strictly blocked from decision state modifications (`HTTP 403 Forbidden`).
-- When a decision is accepted, `reviewNotes` are mandatory to provide an audit trail explaining *why* the human approved the constraint.
+- When a decision is accepted, `reviewNotes` are mandatory to provide an audit trail explaining _why_ the human approved the constraint.
 - Reviewer attribution (`reviewerName`, `reviewerId`, `reviewedAt`) is permanently stamped onto the decision record and serialized into the ADR Markdown file.
 
 ---
@@ -103,7 +105,9 @@ Per Traceback Core Operating Principles (`AGENTS.md`), **AI suggestions must str
 ## 5. Bidirectional ADR Sync Architecture
 
 ### Markdown Specification
+
 ADR files conform to standard Markdown structure with front-matter bullets:
+
 ```markdown
 # ADR-001: Enforce LFU Cache Eviction
 
@@ -119,24 +123,31 @@ ADR files conform to standard Markdown structure with front-matter bullets:
 - **Derived From Claim ID:** `9a8406cf-2276-4936-81f3-e8764801a0fc`
 
 ## Context
+
 Prepopulated context from verified historical rationale.
 
 ## Decision & Consequences
+
 Maintain LFU cache eviction algorithm in src/cache.ts to avoid thrashing.
 
 ## Rationale
+
 Verified historical evidence confirms LRU caused severe memory thrashing under high concurrency.
 
 ## Supporting Evidence & Provenance
-- **[COMMIT]** [`7a8b9c`](https://github.com/org/repo/commit/7a8b9c) — *fix(cache): switch to LFU* by Lead (2026-10-10)
+
+- **[COMMIT]** [`7a8b9c`](https://github.com/org/repo/commit/7a8b9c) — _fix(cache): switch to LFU_ by Lead (2026-10-10)
   - File: `src/cache.ts#L10-L45`
 
 ## Review Notes & Audit Trail
+
 > Explicit human sign-off confirming LFU constraint is an invariant.
 ```
 
 ### Conflict Resolution & Overwrite Protection
+
 Bidirectional synchronization implements timestamp-based two-way conflict protection:
+
 1. **Import Conflict Check:**
    When scanning ADR files from disk, if an existing database decision matches by `{ title }` or `{ createdFromClaimId }`:
    - If `new Date(existing.updatedAt).getTime() > fileStat.mtimeMs + 1000`, the database has newer human updates. The file does **not** overwrite the database record.
@@ -156,33 +167,36 @@ All endpoints are scoped under:
 `/api/workspaces/:workspaceId/repositories/:repositoryId/decisions`  
 Guarded by `AuthGuard` (JWT Bearer) and `WorkspaceGuard` (multi-tenant boundary).
 
-| Method | Endpoint | Description | Role Required |
-|---|---|---|---|
-| `GET` | `/` | List all decisions with optional `?status=` filter | Member / Viewer |
-| `GET` | `/:id` | Get single decision details | Member / Viewer |
-| `POST` | `/` | Create manual decision draft | Member / Admin / Owner |
-| `POST` | `/propose-from-claim` | Promote verified claim into candidate/accepted decision | Member / Admin / Owner |
-| `GET` | `/:id/adr` | Generate ADR Markdown preview for a decision | Member / Viewer |
-| `POST` | `/:id/export-adr` | Export individual decision to `/docs/adr/*.md` | Member / Admin / Owner |
-| `POST` | `/:id/accept` | Accept candidate decision with mandatory review notes | Member / Admin / Owner |
-| `POST` | `/:id/reject` | Reject candidate decision and archive | Member / Admin / Owner |
-| `POST` | `/:id/dispute` | Dispute existing decision | Member / Admin / Owner |
-| `POST` | `/:id/supersede` | Supersede old decision with new decision | Member / Admin / Owner |
-| `POST` | `/sync-adrs` | Run bidirectional sync (`BIDIRECTIONAL`, `IMPORT`, `EXPORT`) | Member / Admin / Owner |
-| `POST` | `/import-adrs` | Ingest Markdown files from disk into PostgreSQL | Member / Admin / Owner |
-| `POST` | `/export-all-adrs` | Export all decisions to Markdown files on disk | Member / Admin / Owner |
+| Method | Endpoint              | Description                                                  | Role Required          |
+| ------ | --------------------- | ------------------------------------------------------------ | ---------------------- |
+| `GET`  | `/`                   | List all decisions with optional `?status=` filter           | Member / Viewer        |
+| `GET`  | `/:id`                | Get single decision details                                  | Member / Viewer        |
+| `POST` | `/`                   | Create manual decision draft                                 | Member / Admin / Owner |
+| `POST` | `/propose-from-claim` | Promote verified claim into candidate/accepted decision      | Member / Admin / Owner |
+| `GET`  | `/:id/adr`            | Generate ADR Markdown preview for a decision                 | Member / Viewer        |
+| `POST` | `/:id/export-adr`     | Export individual decision to `/docs/adr/*.md`               | Member / Admin / Owner |
+| `POST` | `/:id/accept`         | Accept candidate decision with mandatory review notes        | Member / Admin / Owner |
+| `POST` | `/:id/reject`         | Reject candidate decision and archive                        | Member / Admin / Owner |
+| `POST` | `/:id/dispute`        | Dispute existing decision                                    | Member / Admin / Owner |
+| `POST` | `/:id/supersede`      | Supersede old decision with new decision                     | Member / Admin / Owner |
+| `POST` | `/sync-adrs`          | Run bidirectional sync (`BIDIRECTIONAL`, `IMPORT`, `EXPORT`) | Member / Admin / Owner |
+| `POST` | `/import-adrs`        | Ingest Markdown files from disk into PostgreSQL              | Member / Admin / Owner |
+| `POST` | `/export-all-adrs`    | Export all decisions to Markdown files on disk               | Member / Admin / Owner |
 
 ---
 
 ## 7. Local Testing & Verification Instructions
 
 ### 1. Automated Integration Test Script
+
 To run the automated 11-step end-to-end integration test against the live running API:
+
 ```bash
 node <appDataDir>/brain/49908301-fc85-4a58-8f18-b377d02c757c/scratch/e2e-feature4-verify.js
 ```
 
 ### 2. Unit & Integration Test Suites
+
 ```bash
 # Backend unit tests (Decisions, ADR parser, Verification)
 npm run test --prefix apps/api
@@ -198,6 +212,7 @@ npm run build
 ```
 
 ### 3. Manual Interactive UI Walkthrough
+
 1. Start dev servers: `npm run dev`
 2. Navigate to `http://localhost:3000/verify`.
 3. Submit an explanation:

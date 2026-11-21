@@ -25,7 +25,7 @@ Prevents connection starvation on the primary write node.
 
 ## Supporting Evidence & Provenance
 
-- **[COMMIT]** [`a1b2c3d4`](https://github.com/org/repo/commit/a1b2c3d4) — *feat: add replica pool* by **Maintainer** (2026-11-21)
+- **[COMMIT]** [`a1b2c3d4`](https://github.com/org/repo/commit/a1b2c3d4) — _feat: add replica pool_ by **Maintainer** (2026-11-21)
 
 ## Review Notes & Audit Trail
 

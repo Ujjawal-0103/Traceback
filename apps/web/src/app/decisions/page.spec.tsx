@@ -66,7 +66,8 @@ describe("DecisionsPage (Feature 4 Decision Memory & ADR Sync)", () => {
       repositoryId: "repo-1",
       title: "Memoize Streaming Rows",
       summary: "Derived from verified claim: Memoize rows above 500",
-      decision: "Preserve established architectural constraint: Memoize streaming rows",
+      decision:
+        "Preserve established architectural constraint: Memoize streaming rows",
       rationale: "Prevents UI thread freezing during streaming updates.",
       targetFilePath: "src/Table.tsx",
       targetSymbol: "memoizedRows",
@@ -94,7 +95,8 @@ describe("DecisionsPage (Feature 4 Decision Memory & ADR Sync)", () => {
     title: "Memoize Streaming Rows",
     fileName: "ADR-001-memoize-streaming-rows.md",
     filePath: "docs/adr/ADR-001-memoize-streaming-rows.md",
-    markdown: "# ADR-001: Memoize Streaming Rows\n\n## Context\nMemoize rows above 500\n",
+    markdown:
+      "# ADR-001: Memoize Streaming Rows\n\n## Context\nMemoize rows above 500\n",
     status: "ACCEPTED",
     date: new Date().toISOString(),
   };
@@ -130,7 +132,11 @@ describe("DecisionsPage (Feature 4 Decision Memory & ADR Sync)", () => {
       fireEvent.click(viewAdrBtn);
     });
 
-    expect(api.getDecisionAdr).toHaveBeenCalledWith("repo-1", "dec-101", "ws_alpha");
+    expect(api.getDecisionAdr).toHaveBeenCalledWith(
+      "repo-1",
+      "dec-101",
+      "ws_alpha",
+    );
 
     await waitFor(() => {
       expect(
@@ -139,7 +145,9 @@ describe("DecisionsPage (Feature 4 Decision Memory & ADR Sync)", () => {
         }),
       ).toBeInTheDocument();
       expect(screen.getByText(/Copy Markdown/i)).toBeInTheDocument();
-      expect(screen.getByText(/Save to docs\/adr\/ADR-001/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Save to docs\/adr\/ADR-001/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -147,16 +155,26 @@ describe("DecisionsPage (Feature 4 Decision Memory & ADR Sync)", () => {
     render(<DecisionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /sync \/docs\/adr\//i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /sync \/docs\/adr\//i }),
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /sync \/docs\/adr\//i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /sync \/docs\/adr\//i }),
+    );
 
-    expect(screen.getByText(/ADR Git-Native Synchronization/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /run synchronization/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/ADR Git-Native Synchronization/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /run synchronization/i }),
+    ).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /run synchronization/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /run synchronization/i }),
+      );
     });
 
     expect(api.syncAdrs).toHaveBeenCalledWith(
@@ -166,7 +184,9 @@ describe("DecisionsPage (Feature 4 Decision Memory & ADR Sync)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/ADR-001-memoize-streaming-rows.md/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/ADR-001-memoize-streaming-rows.md/),
+      ).toBeInTheDocument();
     });
   });
 });

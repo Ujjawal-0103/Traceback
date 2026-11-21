@@ -66,7 +66,11 @@ export function mapAdrLabelToStatus(label: string): DecisionStatus {
   if (l.includes("review")) return "IN_REVIEW";
   if (l.includes("superseded")) return "SUPERSEDED";
   if (l.includes("disputed")) return "DISPUTED";
-  if (l.includes("deprecated") || l.includes("archived") || l.includes("rejected"))
+  if (
+    l.includes("deprecated") ||
+    l.includes("archived") ||
+    l.includes("rejected")
+  )
     return "ARCHIVED";
   return "CANDIDATE";
 }
@@ -113,13 +117,17 @@ export function formatDecisionToAdrMarkdown(
     lines.push(`- **Reviewed At:** ${decision.reviewedAt}`);
   }
   if (decision.createdFromClaimId) {
-    lines.push(`- **Derived From Claim ID:** \`${decision.createdFromClaimId}\``);
+    lines.push(
+      `- **Derived From Claim ID:** \`${decision.createdFromClaimId}\``,
+    );
   }
   if (decision.supersedesId) {
     lines.push(`- **Supersedes Decision ID:** \`${decision.supersedesId}\``);
   }
   if (decision.supersededById) {
-    lines.push(`- **Superseded By Decision ID:** \`${decision.supersededById}\``);
+    lines.push(
+      `- **Superseded By Decision ID:** \`${decision.supersededById}\``,
+    );
   }
   lines.push("");
 
@@ -147,16 +155,24 @@ export function formatDecisionToAdrMarkdown(
   if (decision.supportingEvidence && decision.supportingEvidence.length > 0) {
     for (const ev of decision.supportingEvidence) {
       const typeTag = ev.sourceType || "SOURCE";
-      const keyLink = ev.url ? `[\`${ev.referenceKey}\`](${ev.url})` : `\`${ev.referenceKey}\``;
+      const keyLink = ev.url
+        ? `[\`${ev.referenceKey}\`](${ev.url})`
+        : `\`${ev.referenceKey}\``;
       const authorText = ev.author ? ` by **${ev.author}**` : "";
       const dateText = ev.timestamp ? ` (${ev.timestamp.slice(0, 10)})` : "";
-      lines.push(`- **[${typeTag}]** ${keyLink} — *${ev.title || "Reference"}*${authorText}${dateText}`);
+      lines.push(
+        `- **[${typeTag}]** ${keyLink} — *${ev.title || "Reference"}*${authorText}${dateText}`,
+      );
       if (ev.filePath) {
-        const lineText = ev.lineRange ? `#L${ev.lineRange.start}-L${ev.lineRange.end}` : "";
+        const lineText = ev.lineRange
+          ? `#L${ev.lineRange.start}-L${ev.lineRange.end}`
+          : "";
         lines.push(`  - File: \`${ev.filePath}${lineText}\``);
       }
       if (ev.snippet) {
-        lines.push(`  - Excerpt: \`${ev.snippet.replace(/\n/g, " ").slice(0, 160)}\``);
+        lines.push(
+          `  - Excerpt: \`${ev.snippet.replace(/\n/g, " ").slice(0, 160)}\``,
+        );
       }
     }
   } else {
@@ -188,11 +204,17 @@ export function sanitizeText(text: string): string {
 }
 
 export function parseAdrMarkdownToDecision(markdown: string): ParsedAdr {
-  if (!markdown || typeof markdown !== "string" || markdown.trim().length === 0) {
+  if (
+    !markdown ||
+    typeof markdown !== "string" ||
+    markdown.trim().length === 0
+  ) {
     throw new Error("ADR markdown content is empty.");
   }
   if (markdown.length > 500_000) {
-    throw new Error("ADR markdown content exceeds maximum allowed size (500KB).");
+    throw new Error(
+      "ADR markdown content exceeds maximum allowed size (500KB).",
+    );
   }
 
   const lines = markdown.split(/\r?\n/);
@@ -276,9 +298,14 @@ export function parseAdrMarkdownToDecision(markdown: string): ParsedAdr {
     }
   }
 
-  const summary = (sectionContent["context"] || []).join("\n").trim() || `ADR imported from ${identifier || "file"}`;
-  const decision = (sectionContent["decision"] || []).join("\n").trim() || title;
-  const rationale = (sectionContent["rationale"] || []).join("\n").trim() || "Imported architectural rationale.";
+  const summary =
+    (sectionContent["context"] || []).join("\n").trim() ||
+    `ADR imported from ${identifier || "file"}`;
+  const decision =
+    (sectionContent["decision"] || []).join("\n").trim() || title;
+  const rationale =
+    (sectionContent["rationale"] || []).join("\n").trim() ||
+    "Imported architectural rationale.";
   const reviewBody = (sectionContent["review"] || []).join("\n").trim();
   if (reviewBody) {
     reviewNotes = reviewBody.replace(/^>\s*/gm, "");

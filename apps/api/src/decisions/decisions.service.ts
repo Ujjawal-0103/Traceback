@@ -32,7 +32,6 @@ import {
   generateAdrFileName,
 } from "./adr-parser.util";
 
-
 @Injectable()
 export class DecisionsService {
   private readonly logger = new Logger(DecisionsService.name);
@@ -365,20 +364,22 @@ export class DecisionsService {
       dto.targetFilePath?.trim() ||
       claim.session.targetFilePath ||
       (evidenceItems[0]?.filePath ?? null);
-    const targetSymbol =
-      dto.targetSymbol?.trim() || claim.targetSymbol || null;
+    const targetSymbol = dto.targetSymbol?.trim() || claim.targetSymbol || null;
 
     const isExplicitlyAccepted = dto.status === "ACCEPTED";
     if (isExplicitlyAccepted) {
       await this.verifyReviewerRole(workspaceId, user);
     }
-    const status: DecisionStatus = isExplicitlyAccepted ? "ACCEPTED" : "CANDIDATE";
-    const reviewerId = isExplicitlyAccepted ? (user?.id || null) : null;
+    const status: DecisionStatus = isExplicitlyAccepted
+      ? "ACCEPTED"
+      : "CANDIDATE";
+    const reviewerId = isExplicitlyAccepted ? user?.id || null : null;
     const reviewerName = isExplicitlyAccepted
-      ? (user?.name || "Human Reviewer")
+      ? user?.name || "Human Reviewer"
       : null;
     const reviewNotes = isExplicitlyAccepted
-      ? (dto.reviewNotes?.trim() || "Explicitly accepted by reviewer during promotion.")
+      ? dto.reviewNotes?.trim() ||
+        "Explicitly accepted by reviewer during promotion."
       : null;
     const reviewedAt = isExplicitlyAccepted ? new Date() : null;
 
@@ -558,7 +559,9 @@ export class DecisionsService {
     options?: ExportAdrDto,
   ): Promise<AdrFileDto> {
     const adrDto = await this.getDecisionAdr(workspaceId, repositoryId, id);
-    const { adrDir, relativeDir } = this.resolveAdrDirectory(options?.adrDirectory);
+    const { adrDir, relativeDir } = this.resolveAdrDirectory(
+      options?.adrDirectory,
+    );
 
     if (!fs.existsSync(adrDir)) {
       fs.mkdirSync(adrDir, { recursive: true });
@@ -597,7 +600,9 @@ export class DecisionsService {
     options?: SyncAdrsDto,
   ): Promise<AdrSyncResultDto> {
     const decisions = await this.listDecisions(workspaceId, repositoryId);
-    const { adrDir, relativeDir } = this.resolveAdrDirectory(options?.adrDirectory);
+    const { adrDir, relativeDir } = this.resolveAdrDirectory(
+      options?.adrDirectory,
+    );
 
     if (!fs.existsSync(adrDir)) {
       fs.mkdirSync(adrDir, { recursive: true });
@@ -621,7 +626,9 @@ export class DecisionsService {
         // Conflict resolution: Check if file already exists on disk and was modified more recently than DB record
         if (fs.existsSync(fullPath)) {
           const fileStat = fs.statSync(fullPath);
-          const decisionTimestamp = new Date(decision.updatedAt || decision.createdAt).getTime();
+          const decisionTimestamp = new Date(
+            decision.updatedAt || decision.createdAt,
+          ).getTime();
           // If file on disk is newer by >1s, preserve manual edits and do not overwrite
           if (fileStat.mtimeMs > decisionTimestamp + 1000) {
             this.logger.log(
@@ -672,7 +679,9 @@ export class DecisionsService {
     options?: SyncAdrsDto,
   ): Promise<AdrSyncResultDto> {
     await this.verifyRepository(workspaceId, repositoryId);
-    const { repoRoot, adrDir, relativeDir } = this.resolveAdrDirectory(options?.adrDirectory);
+    const { repoRoot, adrDir, relativeDir } = this.resolveAdrDirectory(
+      options?.adrDirectory,
+    );
 
     const candidateDirs = [adrDir];
     // Fallback to docs/architecture/ADRs if docs/adr does not exist or is empty
@@ -711,7 +720,9 @@ export class DecisionsService {
             repositoryId,
             OR: [
               { title: parsed.title },
-              parsed.createdFromClaimId ? { createdFromClaimId: parsed.createdFromClaimId } : {},
+              parsed.createdFromClaimId
+                ? { createdFromClaimId: parsed.createdFromClaimId }
+                : {},
             ],
           },
         });
@@ -721,7 +732,9 @@ export class DecisionsService {
 
         let savedRecord: any;
         if (existing) {
-          const dbTimestamp = new Date(existing.updatedAt || existing.createdAt).getTime();
+          const dbTimestamp = new Date(
+            existing.updatedAt || existing.createdAt,
+          ).getTime();
           // Conflict resolution: If DB record was modified more recently than disk file by >1s, preserve DB record
           if (dbTimestamp > fileMtime + 1000) {
             this.logger.log(
@@ -765,7 +778,9 @@ export class DecisionsService {
               reviewNotes: parsed.reviewNotes || null,
               supportingEvidence: (parsed.supportingEvidence as any) || [],
               reviewerName: parsed.reviewerName || "ADR Importer",
-              reviewedAt: parsed.reviewedAt ? new Date(parsed.reviewedAt) : new Date(),
+              reviewedAt: parsed.reviewedAt
+                ? new Date(parsed.reviewedAt)
+                : new Date(),
               createdFromClaimId: parsed.createdFromClaimId || null,
             },
           });
@@ -829,11 +844,19 @@ export class DecisionsService {
     };
 
     if (direction === "IMPORT" || direction === "BIDIRECTIONAL") {
-      importedResult = await this.importAdrsFromDocs(workspaceId, repositoryId, options);
+      importedResult = await this.importAdrsFromDocs(
+        workspaceId,
+        repositoryId,
+        options,
+      );
     }
 
     if (direction === "EXPORT" || direction === "BIDIRECTIONAL") {
-      exportedResult = await this.exportAllDecisionsToAdrs(workspaceId, repositoryId, options);
+      exportedResult = await this.exportAllDecisionsToAdrs(
+        workspaceId,
+        repositoryId,
+        options,
+      );
     }
 
     const combinedFiles = Array.from(
@@ -854,7 +877,6 @@ export class DecisionsService {
       timestamp: new Date().toISOString(),
     };
   }
-
 
   private mapDecisionToDto(record: any): EngineeringDecisionDto {
     return {

@@ -238,7 +238,8 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
 
     fireEvent.change(screen.getByLabelText(/ai-generated explanation/i), {
       target: {
-        value: "Atomic locks were added to avoid cache concurrency race conditions",
+        value:
+          "Atomic locks were added to avoid cache concurrency race conditions",
       },
     });
 
@@ -255,17 +256,23 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
     });
 
     // Click Promote to Decision button
-    fireEvent.click(screen.getByRole("button", { name: /promote to decision/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /promote to decision/i }),
+    );
 
     // Modal should be open with prepopulated title and decision inputs
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByLabelText(/decision title/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/decision statement/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/rationale & verification context/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/rationale & verification context/i),
+    ).toBeInTheDocument();
 
     // Submit promotion
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /create candidate decision/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /create candidate decision/i }),
+      );
     });
 
     expect(api.proposeDecisionFromClaim).toHaveBeenCalledWith(
@@ -281,7 +288,9 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
 
     // After promotion, direct link with target id should appear
     await waitFor(() => {
-      const link = screen.getByRole("link", { name: /view in decision memory/i });
+      const link = screen.getByRole("link", {
+        name: /view in decision memory/i,
+      });
       expect(link).toHaveAttribute(
         "href",
         "/decisions?repoId=repo-1&id=dec-promoted-123",
@@ -289,4 +298,3 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
     });
   });
 });
-

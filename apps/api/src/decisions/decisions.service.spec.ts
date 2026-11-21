@@ -60,9 +60,12 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
     workspaceId: "ws-1",
     repositoryId: "repo-1",
     title: "Architectural Constraint for memoizedRows",
-    summary: 'Derived from verified claim: "Row mapping is memoized to prevent UI thread lockups."',
-    decision: "Preserve established architectural constraint: Row mapping is memoized to prevent UI thread lockups.",
-    rationale: "Verified historical evidence confirms this requirement was intentionally implemented.",
+    summary:
+      'Derived from verified claim: "Row mapping is memoized to prevent UI thread lockups."',
+    decision:
+      "Preserve established architectural constraint: Row mapping is memoized to prevent UI thread lockups.",
+    rationale:
+      "Verified historical evidence confirms this requirement was intentionally implemented.",
     targetFilePath: "src/Table.tsx",
     targetSymbol: "memoizedRows",
     status: "CANDIDATE",
@@ -167,7 +170,9 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
       expect(result.status).toBe("ACCEPTED");
       expect(result.title).toBe("Approved Table Memoization");
       expect(result.reviewerName).toBe("Alex Lead");
-      expect(result.reviewNotes).toBe("Explicit human sign-off on historical rationale.");
+      expect(result.reviewNotes).toBe(
+        "Explicit human sign-off on historical rationale.",
+      );
       expect(result.reviewedAt).not.toBeNull();
     });
   });
@@ -211,7 +216,9 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
 
       expect(adr.decisionId).toBe("dec-1");
       expect(adr.identifier).toMatch(/^ADR-\d+$/);
-      expect(adr.markdown).toContain("# ADR-001: Architectural Constraint for memoizedRows");
+      expect(adr.markdown).toContain(
+        "# ADR-001: Architectural Constraint for memoizedRows",
+      );
       expect(adr.markdown).toContain("## Supporting Evidence & Provenance");
     });
 
@@ -221,12 +228,19 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
       if (fs.existsSync(tempAdrDir)) fs.rmSync(tempAdrDir, { recursive: true });
 
       try {
-        const adrFile = await service.exportDecisionToAdr("ws-1", "repo-1", "dec-1", {
-          adrDirectory: "tmp-test-adrs",
-        });
+        const adrFile = await service.exportDecisionToAdr(
+          "ws-1",
+          "repo-1",
+          "dec-1",
+          {
+            adrDirectory: "tmp-test-adrs",
+          },
+        );
 
         expect(adrFile.fileName).toMatch(/ADR-001.*\.md/);
-        expect(fs.existsSync(path.resolve(repoRoot, adrFile.filePath))).toBe(true);
+        expect(fs.existsSync(path.resolve(repoRoot, adrFile.filePath))).toBe(
+          true,
+        );
         expect(prisma.sourceRecord.upsert).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
@@ -237,7 +251,8 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
           }),
         );
       } finally {
-        if (fs.existsSync(tempAdrDir)) fs.rmSync(tempAdrDir, { recursive: true });
+        if (fs.existsSync(tempAdrDir))
+          fs.rmSync(tempAdrDir, { recursive: true });
       }
     });
 
@@ -247,15 +262,20 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
       if (fs.existsSync(tempAdrDir)) fs.rmSync(tempAdrDir, { recursive: true });
 
       try {
-        const syncResult = await service.syncAdrsBidirectional("ws-1", "repo-1", {
-          direction: "BIDIRECTIONAL",
-          adrDirectory: "tmp-test-sync",
-        });
+        const syncResult = await service.syncAdrsBidirectional(
+          "ws-1",
+          "repo-1",
+          {
+            direction: "BIDIRECTIONAL",
+            adrDirectory: "tmp-test-sync",
+          },
+        );
 
         expect(syncResult.exportedCount).toBeGreaterThanOrEqual(1);
         expect(syncResult.syncedFiles.length).toBeGreaterThan(0);
       } finally {
-        if (fs.existsSync(tempAdrDir)) fs.rmSync(tempAdrDir, { recursive: true });
+        if (fs.existsSync(tempAdrDir))
+          fs.rmSync(tempAdrDir, { recursive: true });
       }
     });
 
@@ -283,7 +303,11 @@ describe("DecisionsService (Feature 4 Evidence-to-Decision & ADR Sync)", () => {
           "repo-1",
           "dec-1",
           { reviewNotes: "Viewer attempting acceptance" },
-          { id: "viewer-user-1", email: "viewer@org.com", name: "Viewer" } as any,
+          {
+            id: "viewer-user-1",
+            email: "viewer@org.com",
+            name: "Viewer",
+          } as any,
         ),
       ).rejects.toThrow("Workspace viewers are not permitted");
     });

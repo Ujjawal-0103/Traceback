@@ -83,7 +83,6 @@ export class DecisionsController {
     );
   }
 
-
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createDecision(
@@ -157,7 +156,6 @@ export class DecisionsController {
       dto,
     );
   }
-
 
   @Patch(":id")
   async updateDecision(

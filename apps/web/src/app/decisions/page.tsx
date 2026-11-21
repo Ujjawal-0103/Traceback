@@ -145,7 +145,6 @@ function DecisionMemoryContent() {
     setTimeout(() => setCopyFeedback(false), 2000);
   };
 
-
   // Load repositories
   const loadRepositories = useCallback(async () => {
     if (!activeWorkspace?.id) return;
@@ -1604,7 +1603,9 @@ function DecisionMemoryContent() {
                     File: <code>{viewingAdr.filePath}</code>
                   </span>
                   <span>•</span>
-                  <span>Status: <strong>{viewingAdr.status}</strong></span>
+                  <span>
+                    Status: <strong>{viewingAdr.status}</strong>
+                  </span>
                 </div>
               </div>
               <button
@@ -1841,8 +1842,8 @@ function DecisionMemoryContent() {
                     onChange={() => setSyncDirection("BIDIRECTIONAL")}
                   />
                   <span>
-                    <strong>Bidirectional Sync</strong> (Import new ADRs + Export
-                    DB decisions)
+                    <strong>Bidirectional Sync</strong> (Import new ADRs +
+                    Export DB decisions)
                   </span>
                 </label>
                 <label
@@ -2113,7 +2114,6 @@ function DecisionMemoryContent() {
         </div>
       )}
     </main>
-
   );
 }
 

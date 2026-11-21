@@ -242,7 +242,6 @@ function VerifyWorkspaceContent() {
     }
   };
 
-
   // Load repositories for current workspace
   const loadRepositories = useCallback(async () => {
     if (!activeWorkspace?.id) return;
@@ -2270,7 +2269,6 @@ function VerifyWorkspaceContent() {
         </div>
       )}
     </main>
-
   );
 }
 

@@ -76,7 +76,9 @@ describe("ADR Parser & Serializer Util", () => {
     expect(md).toContain("## Decision & Consequences");
     expect(md).toContain(sampleDecision.decision);
     expect(md).toContain("## Supporting Evidence & Provenance");
-    expect(md).toContain("[`7a8b9c`](https://github.com/org/repo/commit/7a8b9c)");
+    expect(md).toContain(
+      "[`7a8b9c`](https://github.com/org/repo/commit/7a8b9c)",
+    );
     expect(md).toContain("## Review Notes & Audit Trail");
     expect(md).toContain(sampleDecision.reviewNotes);
   });
@@ -92,9 +94,13 @@ describe("ADR Parser & Serializer Util", () => {
     expect(parsed.targetFilePath).toBe("src/app/layout.tsx");
     expect(parsed.createdFromClaimId).toBe("claim_456");
     expect(parsed.summary).toContain("System must initialize in light theme");
-    expect(parsed.decision).toContain("Default data-theme to light in root layout.");
+    expect(parsed.decision).toContain(
+      "Default data-theme to light in root layout.",
+    );
     expect(parsed.rationale).toContain("Per AGENTS.md rules");
-    expect(parsed.reviewNotes).toContain("Confirmed necessary for accessibility conformance.");
+    expect(parsed.reviewNotes).toContain(
+      "Confirmed necessary for accessibility conformance.",
+    );
     expect(parsed.supportingEvidence.length).toBeGreaterThan(0);
     expect(parsed.supportingEvidence[0].referenceKey).toBe("7a8b9c");
   });
@@ -117,8 +123,12 @@ No scripts allowed.
   });
 
   it("rejects empty or excessively large markdown files", () => {
-    expect(() => parseAdrMarkdownToDecision("   ")).toThrow("ADR markdown content is empty.");
+    expect(() => parseAdrMarkdownToDecision("   ")).toThrow(
+      "ADR markdown content is empty.",
+    );
     const hugeContent = "# ADR-999: Huge\n" + "x".repeat(500_001);
-    expect(() => parseAdrMarkdownToDecision(hugeContent)).toThrow("exceeds maximum allowed size");
+    expect(() => parseAdrMarkdownToDecision(hugeContent)).toThrow(
+      "exceeds maximum allowed size",
+    );
   });
 });

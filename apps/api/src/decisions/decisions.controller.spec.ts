@@ -50,9 +50,15 @@ describe("DecisionsController", () => {
       proposeFromClaim: jest.fn().mockResolvedValue(mockDecision),
       updateDecision: jest.fn().mockResolvedValue(mockDecision),
       acceptDecision: jest.fn().mockResolvedValue(mockDecision),
-      rejectDecision: jest.fn().mockResolvedValue({ ...mockDecision, status: "ARCHIVED" }),
-      disputeDecision: jest.fn().mockResolvedValue({ ...mockDecision, status: "DISPUTED" }),
-      supersedeDecision: jest.fn().mockResolvedValue({ ...mockDecision, status: "SUPERSEDED" }),
+      rejectDecision: jest
+        .fn()
+        .mockResolvedValue({ ...mockDecision, status: "ARCHIVED" }),
+      disputeDecision: jest
+        .fn()
+        .mockResolvedValue({ ...mockDecision, status: "DISPUTED" }),
+      supersedeDecision: jest
+        .fn()
+        .mockResolvedValue({ ...mockDecision, status: "SUPERSEDED" }),
       getDecisionAdr: jest.fn().mockResolvedValue(mockAdr),
       exportDecisionToAdr: jest.fn().mockResolvedValue(mockAdr),
       exportAllDecisionsToAdrs: jest.fn().mockResolvedValue(mockSyncResult),
@@ -74,9 +80,17 @@ describe("DecisionsController", () => {
   });
 
   it("lists decisions with optional status filter", async () => {
-    const result = await controller.listDecisions("ws-1", "repo-1", "ACCEPTED" as any);
+    const result = await controller.listDecisions(
+      "ws-1",
+      "repo-1",
+      "ACCEPTED" as any,
+    );
     expect(result).toHaveLength(1);
-    expect(service.listDecisions).toHaveBeenCalledWith("ws-1", "repo-1", "ACCEPTED");
+    expect(service.listDecisions).toHaveBeenCalledWith(
+      "ws-1",
+      "repo-1",
+      "ACCEPTED",
+    );
   });
 
   it("proposes decision from verified claim", async () => {
@@ -98,7 +112,11 @@ describe("DecisionsController", () => {
   it("retrieves ADR markdown for a decision", async () => {
     const result = await controller.getDecisionAdr("ws-1", "repo-1", "dec-101");
     expect(result.identifier).toBe("ADR-001");
-    expect(service.getDecisionAdr).toHaveBeenCalledWith("ws-1", "repo-1", "dec-101");
+    expect(service.getDecisionAdr).toHaveBeenCalledWith(
+      "ws-1",
+      "repo-1",
+      "dec-101",
+    );
   });
 
   it("exports decision to ADR file", async () => {
@@ -116,7 +134,9 @@ describe("DecisionsController", () => {
     const result = await controller.syncAdrs("ws-1", "repo-1", {
       direction: "BIDIRECTIONAL",
     });
-    expect(result.syncedFiles).toContain("docs/adr/ADR-001-light-theme-default.md");
+    expect(result.syncedFiles).toContain(
+      "docs/adr/ADR-001-light-theme-default.md",
+    );
     expect(service.syncAdrsBidirectional).toHaveBeenCalled();
   });
 });
