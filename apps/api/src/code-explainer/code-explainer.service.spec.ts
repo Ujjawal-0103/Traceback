@@ -263,7 +263,8 @@ describe("CodeExplainerService", () => {
           filePath: "src/auth/jwt.ts",
           symbol: "verifyToken",
           question: "Why do we use JWT tokens?",
-          codeSnippet: "export function verifyToken(token: string) { return jwt.verify(token); }",
+          codeSnippet:
+            "export function verifyToken(token: string) { return jwt.verify(token); }",
         },
       );
 
@@ -284,11 +285,19 @@ describe("CodeExplainerService", () => {
       // Verify rich structured breakdown
       expect(result.explanationBreakdown).toBeDefined();
       expect(result.explanationBreakdown?.summary).toBeDefined();
-      expect(result.explanationBreakdown?.whatCodeDoes).toContain("Code Reading");
+      expect(result.explanationBreakdown?.whatCodeDoes).toContain(
+        "Code Reading",
+      );
       expect(result.explanationBreakdown?.whyItWasBuilt).toContain("Issue #10");
-      expect(result.explanationBreakdown?.howItWasImplemented).toContain("Pull Request #42");
-      expect(result.explanationBreakdown?.governingConstraints.length).toBeGreaterThan(0);
-      expect(result.explanationBreakdown?.evolutionSummary).toContain("2 recorded commits");
+      expect(result.explanationBreakdown?.howItWasImplemented).toContain(
+        "Pull Request #42",
+      );
+      expect(
+        result.explanationBreakdown?.governingConstraints.length,
+      ).toBeGreaterThan(0);
+      expect(result.explanationBreakdown?.evolutionSummary).toContain(
+        "2 recorded commits",
+      );
       expect(result.explanationBreakdown?.cautionBeforeEditing).toBeDefined();
 
       // Verify automatic pipeline verification occurred
