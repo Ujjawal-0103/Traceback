@@ -65,6 +65,10 @@ export class AdrSyncService {
     const defaultAdr = path.join(repoRoot, "docs", "adr");
     const fallbackAdr = path.join(repoRoot, "docs", "architecture", "ADRs");
 
+    if (customDir) {
+      return path.resolve(customDir);
+    }
+
     try {
       const stats = await fs.stat(defaultAdr);
       if (stats.isDirectory()) {
