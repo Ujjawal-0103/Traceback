@@ -770,6 +770,90 @@ export interface RecordIntentDispositionDto {
 }
 
 // ============================================================================
+// Deliverable #4: AI Hallucination & Calibration Scorecard & Context Blind-Spot Map
+// ============================================================================
+
+export interface VerdictBreakdownItem {
+  count: number;
+  percentage: number;
+}
+
+export interface VerdictBreakdown {
+  supported: VerdictBreakdownItem;
+  contradicted: VerdictBreakdownItem;
+  mixed: VerdictBreakdownItem;
+  insufficientEvidence: VerdictBreakdownItem;
+}
+
+export interface HumanOverrideBreakdown {
+  totalReviewed: number;
+  agreedCount: number;
+  overrideCount: number;
+  overrideRate: number | null;
+  hasHumanReviews: boolean;
+}
+
+export interface ContextBlindSpotItem {
+  filePath: string;
+  repositoryId: string;
+  repositoryName: string;
+  insufficientEvidenceCount: number;
+  totalQueries: number;
+  commitChurnCount: number;
+  hasAcceptedDecision: boolean;
+  decisionsCount: number;
+  suggestedAction: "DOCUMENT_DECISION" | "COVERED";
+  lastQueriedAt?: string;
+}
+
+export interface CalibrationSessionTrendItem {
+  sessionId: string;
+  label: string;
+  trustScore: number;
+  supportedCount: number;
+  contradictedCount: number;
+  abstainedCount: number;
+}
+
+export interface CalibrationQuadrants {
+  verifiedGrounded: number;
+  silentHallucinations: number;
+  caughtContradictions: number;
+  safeAbstentions: number;
+}
+
+export interface CalibrationRecentDisagreementItem {
+  claimId: string;
+  sessionId: string;
+  claimText: string;
+  filePath: string;
+  machineVerdict: string;
+  humanVerdict: string;
+}
+
+export interface CalibrationScorecardDto {
+  workspaceId: string;
+  totalVerifications: number;
+  totalClaims: number;
+  effectiveTrustScore: number;
+  aiGroundedRate: number;
+  effectiveGroundedRate: number;
+  groundedRate: number;
+  abstentionRate: number;
+  contradictedRate: number;
+  mixedRate: number;
+  overrideRate: number | null;
+  verdictBreakdown: VerdictBreakdown;
+  effectiveVerdictBreakdown: VerdictBreakdown;
+  aiVerdictBreakdown: VerdictBreakdown;
+  humanOverride: HumanOverrideBreakdown;
+  blindSpots: ContextBlindSpotItem[];
+  sessionTrend: CalibrationSessionTrendItem[];
+  calibrationQuadrants: CalibrationQuadrants;
+  recentDisagreements: CalibrationRecentDisagreementItem[];
+  summaryTimestamp: string;
+}
+
 // Feature 4: ADR Synchronization & Evidence-to-Decision Contracts
 // ============================================================================
 

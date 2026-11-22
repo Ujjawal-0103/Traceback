@@ -31,6 +31,7 @@ import {
   CheckChangeAgainstDecisionsResponse,
   ImportRepositoryByUrlDto,
   ImportRepositoryByUrlResponse,
+  CalibrationScorecardDto,
   AdrFileDto,
   AdrSyncResultDto,
   SyncAdrOptionsDto,
@@ -746,6 +747,18 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ disposition, notes }),
       },
+    );
+  },
+
+  // ============================================================================
+  // Deliverable #4: Telemetry & Calibration Scorecard
+  // ============================================================================
+
+  async getCalibrationScorecard(
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<CalibrationScorecardDto> {
+    return request<CalibrationScorecardDto>(
+      `/workspaces/${workspaceId}/telemetry/calibration`,
     );
   },
 };

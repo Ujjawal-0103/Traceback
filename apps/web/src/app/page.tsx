@@ -8,6 +8,7 @@ import {
   RepositoryDetailsDto,
   VerificationHistoryItem,
 } from "@traceback/shared-types";
+import { CalibrationScorecard } from "../components/CalibrationScorecard";
 
 export default function HomePage() {
   const { user, activeWorkspace } = useAuth();
@@ -215,6 +216,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* AI Hallucination & Calibration Scorecard with Context Blind-Spot Map (Deliverable #4) */}
+        <CalibrationScorecard workspaceId={activeWorkspace?.id} />
 
         {/* 3 Core Pillars Cards */}
         <section

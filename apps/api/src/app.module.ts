@@ -12,6 +12,7 @@ import { AuthModule } from "./auth/auth.module";
 import { VerificationModule } from "./verification/verification.module";
 import { AdvisoryModule } from "./advisory/advisory.module";
 import { DecisionsModule } from "./decisions/decisions.module";
+import { TelemetryModule } from "./telemetry/telemetry.module";
 import { DecisionPromotionModule } from "./decision-promotion/decision-promotion.module";
 import { AdrSyncModule } from "./adr-sync/adr-sync.module";
 
@@ -40,6 +41,7 @@ import * as path from "path";
     VerificationModule,
     AdvisoryModule,
     DecisionsModule,
+    TelemetryModule,
     DecisionPromotionModule,
     AdrSyncModule,
   ],
