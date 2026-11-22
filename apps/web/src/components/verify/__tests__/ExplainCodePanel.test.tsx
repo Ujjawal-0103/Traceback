@@ -236,15 +236,20 @@ describe("ExplainCodePanel", () => {
       synthesisMode: "deterministic_grounded",
       generatedExplanation: "Table memoization narrative",
       explanationBreakdown: {
-        summary: "The Table component memoizes rows when count exceeds 500 to prevent layout thrashing.",
-        whyItWasBuilt: "Created to resolve UI stuttering during high-frequency telemetry updates.",
-        howItWasImplemented: "Implemented React.memo with a shallow row comparison predicate.",
-        whatCodeDoes: "Iterates through rows and conditionally delegates to VirtualizedRow.",
+        summary:
+          "The Table component memoizes rows when count exceeds 500 to prevent layout thrashing.",
+        whyItWasBuilt:
+          "Created to resolve UI stuttering during high-frequency telemetry updates.",
+        howItWasImplemented:
+          "Implemented React.memo with a shallow row comparison predicate.",
+        whatCodeDoes:
+          "Iterates through rows and conditionally delegates to VirtualizedRow.",
         governingConstraints: [
           "Row height must remain static at 48px",
           "Maximum batch size capped at 1,000 items",
         ],
-        cautionBeforeEditing: "Modifying the memoization threshold will trigger re-renders in parent viewport.",
+        cautionBeforeEditing:
+          "Modifying the memoization threshold will trigger re-renders in parent viewport.",
         evolutionSummary: "Iterated across PR #42 and commit a1b2c3d.",
       },
       evidenceSummary: {
@@ -272,12 +277,18 @@ describe("ExplainCodePanel", () => {
     await waitFor(() => {
       expect(screen.getByTestId("explanation-breakdown")).toBeInTheDocument();
       expect(
-        screen.getByText(/The Table component memoizes rows when count exceeds 500/i),
+        screen.getByText(
+          /The Table component memoizes rows when count exceeds 500/i,
+        ),
       ).toBeInTheDocument();
       expect(screen.getByText(/Origin & Problem Solved/i)).toBeInTheDocument();
       expect(screen.getByText(/Technical Approach/i)).toBeInTheDocument();
-      expect(screen.getByText(/From Code Snippet — Not Historical Proof/i)).toBeInTheDocument();
-      expect(screen.getByText(/Row height must remain static at 48px/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/From Code Snippet — Not Historical Proof/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Row height must remain static at 48px/i),
+      ).toBeInTheDocument();
       expect(screen.getByText(/Caution Before Editing/i)).toBeInTheDocument();
       expect(screen.getByText(/How It Evolved/i)).toBeInTheDocument();
       expect(screen.getByTestId("section-2-divider")).toBeInTheDocument();
