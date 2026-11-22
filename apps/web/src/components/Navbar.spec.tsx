@@ -301,7 +301,9 @@ describe("Navbar Component — Design #2: Elevated with Workspace Selector", () 
       screen.queryByRole("navigation", { name: /main workspace navigation/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText("Search repositories or decisions..."),
+      screen.queryByPlaceholderText(
+        "Search repositories or decisions...",
+      ),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /^overview$/i }),
