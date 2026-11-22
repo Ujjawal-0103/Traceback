@@ -31,6 +31,10 @@ import {
   CheckChangeAgainstDecisionsResponse,
   ImportRepositoryByUrlDto,
   ImportRepositoryByUrlResponse,
+  AdrFileDto,
+  AdrSyncResultDto,
+  SyncAdrOptionsDto,
+  PromoteToDecisionRequest,
 } from "@traceback/shared-types";
 
 // Ensure the API base URL targets the /api global prefix used by NestJS
@@ -620,16 +624,74 @@ export const api = {
 
   async proposeDecisionFromClaim(
     repositoryId: string,
-    claimId: string,
+    payloadOrClaimId: string | PromoteToDecisionRequest,
     title?: string,
     severity?: string,
     workspaceId: string = getApiActiveWorkspaceId(),
   ): Promise<any> {
+    const body =
+      typeof payloadOrClaimId === "string"
+        ? { claimId: payloadOrClaimId, title, severity }
+        : payloadOrClaimId;
+
     return request<any>(
       `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/propose-from-claim`,
       {
         method: "POST",
-        body: JSON.stringify({ claimId, title, severity }),
+        body: JSON.stringify(body),
+      },
+    );
+  },
+
+  async getDecisionAdr(
+    repositoryId: string,
+    id: string,
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<AdrFileDto> {
+    return request<AdrFileDto>(
+      `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/${id}/adr`,
+    );
+  },
+
+  async exportDecisionAdr(
+    repositoryId: string,
+    id: string,
+    adrDirectory?: string,
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<AdrFileDto> {
+    return request<AdrFileDto>(
+      `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/${id}/export-adr`,
+      {
+        method: "POST",
+        body: JSON.stringify({ adrDirectory }),
+      },
+    );
+  },
+
+  async syncAdrs(
+    repositoryId: string,
+    options?: SyncAdrOptionsDto,
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<AdrSyncResultDto> {
+    return request<AdrSyncResultDto>(
+      `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/sync-adrs`,
+      {
+        method: "POST",
+        body: JSON.stringify(options || {}),
+      },
+    );
+  },
+
+  async importAdrs(
+    repositoryId: string,
+    options?: SyncAdrOptionsDto,
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<AdrSyncResultDto> {
+    return request<AdrSyncResultDto>(
+      `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/import-adrs`,
+      {
+        method: "POST",
+        body: JSON.stringify(options || {}),
       },
     );
   },

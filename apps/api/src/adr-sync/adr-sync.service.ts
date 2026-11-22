@@ -16,6 +16,7 @@ import {
   EvidenceReference,
 } from "@traceback/shared-types";
 import * as fs from "fs/promises";
+
 import * as path from "path";
 
 @Injectable()
@@ -60,13 +61,13 @@ export class AdrSyncService {
    * If `docs/adr` does not exist or has no markdown files, checks `<repoRoot>/docs/architecture/ADRs`.
    */
   async resolveAdrDirectory(customDir?: string): Promise<string> {
-    if (customDir) {
-      return path.resolve(customDir);
-    }
-
     const repoRoot = this.getRepoRoot();
     const defaultAdr = path.join(repoRoot, "docs", "adr");
     const fallbackAdr = path.join(repoRoot, "docs", "architecture", "ADRs");
+
+    if (customDir) {
+      return path.resolve(customDir);
+    }
 
     try {
       const stats = await fs.stat(defaultAdr);
@@ -400,16 +401,13 @@ export class AdrSyncService {
 
     // Target export directory is strictly <repoRoot>/docs/adr (or safe custom dir)
     const repoRoot = this.getRepoRoot();
-    const adrDir = dto?.targetDir
-      ? path.resolve(dto.targetDir)
-      : path.join(repoRoot, "docs", "adr");
+    const adrDir = path.join(repoRoot, "docs", "adr");
 
     // Ensure directory exists
     await fs.mkdir(adrDir, { recursive: true });
 
     // Generate filename and validate with path traversal guard
-    const rawSlug = dto?.customSlug || AdrMarkdownMapper.generateSlug(decision);
-    const fileName = `ADR-${rawSlug}.md`;
+    const fileName = `ADR-${AdrMarkdownMapper.generateSlug(decision)}.md`;
     const targetFilePath = this.validatePath(adrDir, fileName);
 
     // Serialize Markdown content

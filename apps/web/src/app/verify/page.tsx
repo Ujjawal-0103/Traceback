@@ -9,8 +9,9 @@ import {
   RepositoryDetailsDto,
   HumanVerdict,
   TracebackReportExport,
+  DecisionSeverity,
+  DecisionStatus,
 } from "@traceback/shared-types";
-import { PromoteToDecisionModal } from "../../components/decisions/PromoteToDecisionModal";
 
 interface ValidatedEvidence {
   sourceType: string;
@@ -109,13 +110,114 @@ function VerifyWorkspaceContent() {
 
   // Proposing to Decision Memory state
   const [proposedDecisions, setProposedDecisions] = useState<
-    Record<string, { id: string; title: string }>
+    Record<string, { id: string; title: string; status?: string }>
   >({});
   const [proposingDecisionClaimId, setProposingDecisionClaimId] = useState<
     string | null
   >(null);
 
+  // Promote to Decision Interactive Modal State
+  const [promoteModalAssessment, setPromoteModalAssessment] =
+    useState<ClaimAssessment | null>(null);
+  const [promoteTitle, setPromoteTitle] = useState("");
+  const [promoteSummary, setPromoteSummary] = useState("");
+  const [promoteDecision, setPromoteDecision] = useState("");
+  const [promoteRationale, setPromoteRationale] = useState("");
+  const [promoteFilePath, setPromoteFilePath] = useState("");
+  const [promoteSymbol, setPromoteSymbol] = useState("");
+  const [promoteSeverity, setPromoteSeverity] =
+    useState<DecisionSeverity>("HIGH");
+  const [promoteStatus, setPromoteStatus] = useState<"CANDIDATE" | "ACCEPTED">(
+    "CANDIDATE",
+  );
+  const [promoteReviewNotes, setPromoteReviewNotes] = useState("");
+  const [isSubmittingPromotion, setIsSubmittingPromotion] = useState(false);
+  const [promotionFeedback, setPromotionFeedback] = useState<string | null>(
+    null,
+  );
+
+  const handleOpenPromoteModal = (assessment: ClaimAssessment) => {
+    setPromoteModalAssessment(assessment);
+    setPromoteTitle(
+      assessment.targetSymbol
+        ? `Architectural Constraint for ${assessment.targetSymbol}`
+        : `Constraint: ${assessment.claimText.slice(0, 80)}`,
+    );
+    setPromoteSummary(`Derived from verified claim: "${assessment.claimText}"`);
+    setPromoteDecision(
+      `Preserve established architectural constraint: ${assessment.claimText}`,
+    );
+    setPromoteRationale(
+      assessment.rationale ||
+        "Verified historical evidence confirms this requirement was intentionally implemented.",
+    );
+    setPromoteFilePath(
+      assessment.allValidatedEvidence?.[0]?.filePath || targetFilePath || "",
+    );
+    setPromoteSymbol(assessment.targetSymbol || targetSymbol || "");
+    setPromoteSeverity("HIGH");
+    setPromoteStatus("CANDIDATE");
+    setPromoteReviewNotes("");
+    setError(null);
+  };
+
+  const handleExecutePromotion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoteModalAssessment || !selectedRepoId || !activeWorkspace?.id)
+      return;
+    try {
+      setIsSubmittingPromotion(true);
+      setError(null);
+
+      const res = await api.proposeDecisionFromClaim(
+        selectedRepoId,
+        {
+          claimId: promoteModalAssessment.claimId,
+          title: promoteTitle.trim(),
+          summary: promoteSummary.trim(),
+          decision: promoteDecision.trim(),
+          rationale: promoteRationale.trim(),
+          targetFilePath: promoteFilePath.trim() || undefined,
+          targetSymbol: promoteSymbol.trim() || undefined,
+          severity: promoteSeverity,
+          status: promoteStatus,
+          reviewNotes:
+            promoteStatus === "ACCEPTED"
+              ? promoteReviewNotes.trim() || "Approved by human reviewer."
+              : undefined,
+        },
+        undefined,
+        undefined,
+        activeWorkspace.id,
+      );
+
+      setProposedDecisions((prev) => ({
+        ...prev,
+        [promoteModalAssessment.claimId]: {
+          id: res.id,
+          title: res.title,
+          status: res.status,
+        },
+      }));
+
+      setPromotionFeedback(
+        `Decision "${res.title}" successfully promoted as ${res.status === "ACCEPTED" ? "Accepted Invariant" : "Candidate Decision"}.`,
+      );
+      setPromoteModalAssessment(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Failed to promote decision: ${msg}`);
+    } finally {
+      setIsSubmittingPromotion(false);
+    }
+  };
+
   const handleProposeDecision = async (claimId: string) => {
+    const matched = result?.assessments.find((a) => a.claimId === claimId);
+    if (matched) {
+      handleOpenPromoteModal(matched);
+      return;
+    }
     if (!selectedRepoId || !activeWorkspace?.id) return;
     try {
       setProposingDecisionClaimId(claimId);
@@ -129,7 +231,7 @@ function VerifyWorkspaceContent() {
       );
       setProposedDecisions((prev) => ({
         ...prev,
-        [claimId]: { id: res.id, title: res.title },
+        [claimId]: { id: res.id, title: res.title, status: res.status },
       }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -194,6 +296,16 @@ function VerifyWorkspaceContent() {
       loadExistingSession(urlSessionId, urlRepoId);
     }
   }, [urlSessionId, urlRepoId, activeWorkspace, loadExistingSession]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && promoteModalAssessment) {
+        setPromoteModalAssessment(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [promoteModalAssessment]);
 
   // Handle Verification Submission
   const handleVerify = async (e: React.FormEvent) => {
@@ -1476,10 +1588,10 @@ function VerifyWorkspaceContent() {
                         ? Mark Unverified
                       </button>
 
-                      {/* Bridge to Feature Three: Propose into Engineering Decision Memory */}
+                      {/* Bridge to Feature 4: Promote Verified Evidence into Decision Memory */}
                       {proposedDecisions[assessment.claimId] ? (
                         <Link
-                          href={`/decisions`}
+                          href={`/decisions?repoId=${selectedRepoId}&id=${proposedDecisions[assessment.claimId].id}`}
                           id={`link-decision-view-${assessment.claimId}`}
                           style={{
                             display: "inline-flex",
@@ -1496,19 +1608,19 @@ function VerifyWorkspaceContent() {
                             border: "1px solid var(--color-primary)",
                           }}
                         >
-                          🏛️ View Candidate in Decision Memory →
+                          🏛️ View in Decision Memory (
+                          {proposedDecisions[assessment.claimId].status ===
+                          "ACCEPTED"
+                            ? "Accepted Invariant"
+                            : "Candidate"}
+                          ) →
                         </Link>
                       ) : (
                         <button
                           type="button"
                           id={`btn-propose-decision-${assessment.claimId}`}
-                          disabled={
-                            proposingDecisionClaimId === assessment.claimId
-                          }
-                          onClick={() =>
-                            handleProposeDecision(assessment.claimId)
-                          }
-                          title="Propose this verified factual claim as a candidate constraint in Engineering Decision Memory"
+                          onClick={() => handleOpenPromoteModal(assessment)}
+                          title="Prepopulate and promote this verified factual claim into Engineering Decision Memory"
                           style={{
                             padding: "0.45rem 0.9rem",
                             borderRadius: "6px",
@@ -1522,23 +1634,9 @@ function VerifyWorkspaceContent() {
                             transition: "all 0.15s ease",
                           }}
                         >
-                          {proposingDecisionClaimId === assessment.claimId
-                            ? "Proposing..."
-                            : "🏛️ Propose Decision Candidate"}
+                          🏛️ Promote to Decision
                         </button>
                       )}
-
-                      {/* Promote to Decision Loop */}
-                      <PromoteToDecisionModal
-                        claimId={assessment.claimId}
-                        sessionId={result.sessionId}
-                        repositoryId={selectedRepoId}
-                        claimText={assessment.claimText}
-                        targetSymbol={assessment.targetSymbol}
-                        targetFilePath={result.targetFilePath}
-                        explanation={result.explanation}
-                        evidence={assessment.allValidatedEvidence}
-                      />
                     </div>
 
                     {/* Audit Trail Drawer */}
@@ -1603,6 +1701,557 @@ function VerifyWorkspaceContent() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {/* Feedback Toast/Alert */}
+      {promotionFeedback && (
+        <div
+          role="status"
+          style={{
+            margin: "1rem 0",
+            padding: "0.85rem 1.25rem",
+            borderRadius: "8px",
+            backgroundColor: "var(--color-success-light, #f0fdf4)",
+            border: "1px solid var(--color-success, #15803d)",
+            color: "var(--color-success, #15803d)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>✅ {promotionFeedback}</span>
+          <button
+            type="button"
+            onClick={() => setPromotionFeedback(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Promote to Decision Interactive Modal */}
+      {promoteModalAssessment && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="promote-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPromoteModalAssessment(null);
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "var(--color-surface)",
+              borderRadius: "10px",
+              padding: "1.75rem",
+              maxWidth: "680px",
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "var(--shadow-md)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <div>
+                <h3
+                  id="promote-modal-title"
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 700,
+                    color: "var(--color-text)",
+                  }}
+                >
+                  🏛️ Promote to Decision Memory
+                </h3>
+                <p
+                  style={{
+                    fontSize: "0.825rem",
+                    color: "var(--color-text-secondary)",
+                    marginTop: "0.2rem",
+                  }}
+                >
+                  Prepopulated from verified repository evidence. Human review
+                  governs promotion.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPromoteModalAssessment(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "1.2rem",
+                  color: "var(--color-text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Evidence Provenance Summary */}
+            <div
+              style={{
+                backgroundColor: "var(--color-card-muted, #f1f5f9)",
+                borderRadius: "6px",
+                padding: "0.75rem 1rem",
+                marginBottom: "1.25rem",
+                fontSize: "0.8rem",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  color: "var(--color-text)",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                🔗 Attached Evidence Provenance (
+                {promoteModalAssessment.allValidatedEvidence?.length || 0}{" "}
+                citations preserved)
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.3rem",
+                  maxHeight: "100px",
+                  overflowY: "auto",
+                }}
+              >
+                {promoteModalAssessment.allValidatedEvidence?.map((ev, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: "0.1rem 0.35rem",
+                        borderRadius: "4px",
+                        backgroundColor: "var(--color-surface)",
+                        fontWeight: 700,
+                        fontSize: "0.7rem",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      {ev.sourceType}
+                    </span>
+                    <a
+                      href={ev.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "var(--color-primary)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {ev.referenceKey}
+                    </a>
+                    <span
+                      style={{
+                        color: "var(--color-text-secondary)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {ev.title} {ev.author ? `by ${ev.author}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleExecutePromotion}>
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label
+                  htmlFor="promote-input-title"
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  Decision Title *
+                </label>
+                <input
+                  id="promote-input-title"
+                  type="text"
+                  required
+                  value={promoteTitle}
+                  onChange={(e) => setPromoteTitle(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    color: "var(--color-text)",
+                    fontSize: "0.875rem",
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: "0.75rem",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                <div>
+                  <label
+                    htmlFor="promote-select-severity"
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    Severity
+                  </label>
+                  <select
+                    id="promote-select-severity"
+                    value={promoteSeverity}
+                    onChange={(e) =>
+                      setPromoteSeverity(e.target.value as DecisionSeverity)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-surface)",
+                      color: "var(--color-text)",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                    <option value="ADVISORY">Advisory</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="promote-input-filepath"
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    Target File
+                  </label>
+                  <input
+                    id="promote-input-filepath"
+                    type="text"
+                    value={promoteFilePath}
+                    onChange={(e) => setPromoteFilePath(e.target.value)}
+                    placeholder="e.g. src/config.ts"
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-surface)",
+                      color: "var(--color-text)",
+                      fontSize: "0.875rem",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="promote-input-symbol"
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      color: "var(--color-text)",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    Target Symbol
+                  </label>
+                  <input
+                    id="promote-input-symbol"
+                    type="text"
+                    value={promoteSymbol}
+                    onChange={(e) => setPromoteSymbol(e.target.value)}
+                    placeholder="e.g. memoizedRows"
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-surface)",
+                      color: "var(--color-text)",
+                      fontSize: "0.875rem",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label
+                  htmlFor="promote-textarea-decision"
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  Decision Statement *
+                </label>
+                <textarea
+                  id="promote-textarea-decision"
+                  rows={2}
+                  required
+                  value={promoteDecision}
+                  onChange={(e) => setPromoteDecision(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    color: "var(--color-text)",
+                    fontSize: "0.875rem",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label
+                  htmlFor="promote-textarea-rationale"
+                  style={{
+                    display: "block",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  Rationale & Verification Context *
+                </label>
+                <textarea
+                  id="promote-textarea-rationale"
+                  rows={2}
+                  required
+                  value={promoteRationale}
+                  onChange={(e) => setPromoteRationale(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    color: "var(--color-text)",
+                    fontSize: "0.875rem",
+                  }}
+                />
+              </div>
+
+              {/* Status and Human Review Requirement */}
+              <div
+                style={{
+                  margin: "1rem 0",
+                  padding: "0.85rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-background)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.825rem",
+                    fontWeight: 700,
+                    color: "var(--color-text)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Human Governance & Approval Mode
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1.5rem",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      cursor: "pointer",
+                      fontSize: "0.825rem",
+                      color: "var(--color-text)",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="promoteStatus"
+                      value="CANDIDATE"
+                      checked={promoteStatus === "CANDIDATE"}
+                      onChange={() => setPromoteStatus("CANDIDATE")}
+                    />
+                    <span>Save as Candidate (Requires Team Review)</span>
+                  </label>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      cursor: "pointer",
+                      fontSize: "0.825rem",
+                      color: "var(--color-text)",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="promoteStatus"
+                      value="ACCEPTED"
+                      checked={promoteStatus === "ACCEPTED"}
+                      onChange={() => setPromoteStatus("ACCEPTED")}
+                    />
+                    <span style={{ fontWeight: 600 }}>
+                      Accept Immediately (Active Invariant)
+                    </span>
+                  </label>
+                </div>
+
+                {promoteStatus === "ACCEPTED" && (
+                  <div style={{ marginTop: "0.5rem" }}>
+                    <label
+                      htmlFor="promote-input-review-notes"
+                      style={{
+                        display: "block",
+                        fontSize: "0.775rem",
+                        fontWeight: 600,
+                        color: "var(--color-text)",
+                        marginBottom: "0.2rem",
+                      }}
+                    >
+                      Human Approval Review Notes *
+                    </label>
+                    <input
+                      id="promote-input-review-notes"
+                      type="text"
+                      required
+                      placeholder="e.g. Verified against historical commit 7a8b9c and approved as invariant."
+                      value={promoteReviewNotes}
+                      onChange={(e) => setPromoteReviewNotes(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "0.45rem 0.65rem",
+                        borderRadius: "4px",
+                        border: "1px solid var(--color-border)",
+                        backgroundColor: "var(--color-surface)",
+                        color: "var(--color-text)",
+                        fontSize: "0.825rem",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "0.75rem",
+                  marginTop: "1.25rem",
+                }}
+              >
+                <button
+                  type="button"
+                  id="btn-promote-cancel"
+                  onClick={() => setPromoteModalAssessment(null)}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "transparent",
+                    color: "var(--color-text)",
+                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="btn-promote-submit"
+                  disabled={isSubmittingPromotion}
+                  style={{
+                    padding: "0.5rem 1.25rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    backgroundColor: "var(--color-primary)",
+                    color: "#FFFFFF",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    boxShadow: "var(--shadow-sm)",
+                  }}
+                >
+                  {isSubmittingPromotion
+                    ? "Recording Decision..."
+                    : promoteStatus === "ACCEPTED"
+                      ? "Approve & Record Decision"
+                      : "Create Candidate Decision"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
