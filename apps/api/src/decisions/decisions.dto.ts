@@ -142,5 +142,49 @@ export class ProposeFromClaimDto {
 
   @IsOptional()
   @IsString()
+  summary?: string;
+
+  @IsOptional()
+  @IsString()
+  decision?: string;
+
+  @IsOptional()
+  @IsString()
+  rationale?: string;
+
+  @IsOptional()
+  @IsString()
+  targetFilePath?: string;
+
+  @IsOptional()
+  @IsString()
+  targetSymbol?: string;
+
+  @IsOptional()
+  @IsString()
   severity?: DecisionSeverity;
+
+  @IsOptional()
+  @IsString()
+  status?: DecisionStatus;
+
+  @IsOptional()
+  @IsString()
+  reviewNotes?: string;
+}
+
+export class SyncAdrsDto {
+  @IsOptional()
+  @IsString()
+  direction?: "EXPORT" | "IMPORT" | "BIDIRECTIONAL";
+
+  @IsOptional()
+  @IsString()
+  adrDirectory?: string;
+}
+
+export class ExportAdrDto {
+  @IsOptional()
+  @IsString()
+  adrDirectory?: string;
 }

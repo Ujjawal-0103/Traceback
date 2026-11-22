@@ -53,6 +53,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
         details = resObj.details;
       }
     } else if (exception instanceof Error) {
+      const isDbUnavailable =
+        exception.name === "PrismaClientInitializationError" ||
+        exception.name === "PrismaClientRustPanicError" ||
+        exception.message.includes("Can't reach database server") ||
+        exception.message.includes("database connection");
+
+      if (isDbUnavailable) {
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        code = "DATABASE_UNAVAILABLE";
+        message =
+          "Database service is temporarily unavailable. Please verify connection and retry.";
+      } else {
+        message = "An unexpected internal error occurred";
+        code = "INTERNAL_UNHANDLED";
+      }
+
       // Do not expose arbitrary internal error messages or traces to clients in production
       const safeMessage = redactSecrets(exception.message);
       const safeStack = exception.stack
@@ -62,8 +78,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         `Unhandled Exception on ${request?.url}: ${safeMessage}`,
         safeStack,
       );
-      message = "An unexpected internal error occurred";
-      code = "INTERNAL_UNHANDLED";
     }
 
     const sanitizedMessage = Array.isArray(message)
