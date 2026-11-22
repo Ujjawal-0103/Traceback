@@ -91,7 +91,13 @@ export class DecisionsService {
       orderBy: { createdAt: "desc" },
     });
 
-    return records.map((r) => this.mapDecisionToDto(r));
+    const dtos: EngineeringDecisionDto[] = [];
+    for (const r of records) {
+      const drift = await this.computeDecisionDrift(r);
+      dtos.push(this.mapDecisionToDto(r, drift));
+    }
+
+    return dtos;
   }
 
   async getDecisionById(
@@ -109,7 +115,8 @@ export class DecisionsService {
       throw new NotFoundException(`Engineering decision ${id} not found.`);
     }
 
-    return this.mapDecisionToDto(record);
+    const drift = await this.computeDecisionDrift(record);
+    return this.mapDecisionToDto(record, drift);
   }
 
   async createDecision(
@@ -193,21 +200,22 @@ export class DecisionsService {
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
     await this.verifyReviewerRole(workspaceId, user);
-    await this.getDecisionById(workspaceId, repositoryId, id);
+    const existing = await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
       where: { id },
       data: {
         status: "ACCEPTED",
+        reviewedAt: new Date(),
         reviewerId: user?.id || null,
         reviewerName: user?.name || "Human Reviewer",
-        reviewNotes:
-          dto.reviewNotes?.trim() || "Accepted as historical constraint.",
-        reviewedAt: new Date(),
+        reviewNotes: dto.reviewNotes?.trim() || existing.reviewNotes,
       },
     });
 
-    this.logger.log(`Decision ${id} accepted by ${user?.name || "anonymous"}`);
+    this.logger.log(
+      `Accepted engineering decision ${id} by ${user?.name || "reviewer"}`,
+    );
     return this.mapDecisionToDto(updated);
   }
 
@@ -225,13 +233,14 @@ export class DecisionsService {
       where: { id },
       data: {
         status: "ARCHIVED",
+        reviewedAt: new Date(),
         reviewerId: user?.id || null,
         reviewerName: user?.name || "Human Reviewer",
-        reviewNotes: dto.reviewNotes?.trim() || "Rejected candidate decision.",
-        reviewedAt: new Date(),
+        reviewNotes: dto.reviewNotes?.trim() || null,
       },
     });
 
+    this.logger.log(`Rejected (archived) engineering decision ${id}`);
     return this.mapDecisionToDto(updated);
   }
 
@@ -285,17 +294,20 @@ export class DecisionsService {
       },
     });
 
-    // Update new decision to mark what it supersedes
+    // Update new decision to record supersedesId
     const updatedNew = await this.prisma.engineeringDecision.update({
       where: { id: newDecisionId },
       data: {
         supersedesId: oldDecision.id,
-        status: "ACCEPTED",
         reviewerId: user?.id || null,
-        reviewerName: user?.name || null,
+        reviewerName: user?.name || "Human Reviewer",
         reviewedAt: new Date(),
       },
     });
+
+    this.logger.log(
+      `Marked decision ${oldDecision.id} as SUPERSEDED by ${newDecisionId}`,
+    );
 
     return this.mapDecisionToDto(updatedNew);
   }
@@ -311,25 +323,17 @@ export class DecisionsService {
     const claim = await this.prisma.claim.findUnique({
       where: { id: dto.claimId },
       include: {
-        session: true,
         evidence: true,
+        session: true,
       },
     });
 
     if (!claim) {
-      throw new NotFoundException(`Claim ${dto.claimId} not found.`);
-    }
-
-    if (
-      claim.session.workspaceId !== workspaceId ||
-      claim.session.repositoryId !== repositoryId
-    ) {
-      throw new ForbiddenException(
-        "Claim does not belong to the specified workspace or repository.",
+      throw new NotFoundException(
+        `Verification claim ${dto.claimId} not found.`,
       );
     }
 
-    // Convert evidence records to EvidenceReference items
     const evidenceItems: EvidenceReference[] = claim.evidence.map((ev) => ({
       id: ev.id,
       sourceType: ev.sourceType as any,
@@ -419,6 +423,129 @@ export class DecisionsService {
     );
 
     return this.mapDecisionToDto(decisionRecord);
+  }
+
+  async confirmDecisionValid(
+    workspaceId: string,
+    repositoryId: string,
+    id: string,
+    user?: AuthenticatedUser,
+  ): Promise<EngineeringDecisionDto> {
+    const existing = await this.getDecisionById(workspaceId, repositoryId, id);
+    if (existing.status !== "ACCEPTED") {
+      throw new BadRequestException(
+        "Only ACCEPTED decisions can be confirmed valid against latest commits.",
+      );
+    }
+    const note = `Confirmed valid against current repository state by ${user?.name || "Human Reviewer"} on ${new Date().toISOString()}`;
+    const updatedReviewNotes = existing.reviewNotes
+      ? `${existing.reviewNotes}\n${note}`
+      : note;
+
+    const updated = await this.prisma.engineeringDecision.update({
+      where: { id },
+      data: {
+        updatedAt: new Date(),
+        reviewedAt: new Date(),
+        reviewerId: user?.id || existing.reviewerId,
+        reviewerName: user?.name || existing.reviewerName,
+        reviewNotes: updatedReviewNotes,
+      },
+    });
+
+    return this.mapDecisionToDto(updated, {
+      driftStatus: "CURRENT",
+      isPotentiallyStale: false,
+      newerCommitCount: 0,
+      driftedFiles: [],
+    });
+  }
+
+  async computeDecisionDrift(record: any): Promise<{
+    driftStatus?: "NEEDS_REVIEW" | "CURRENT";
+    isPotentiallyStale?: boolean;
+    driftedFiles?: string[];
+    newerCommitCount?: number;
+    latestDriftingCommitSha?: string;
+    latestDriftingCommitAt?: string;
+  }> {
+    if (record.status !== "ACCEPTED") {
+      return { isPotentiallyStale: false };
+    }
+
+    const targetFiles: string[] = [];
+    if (record.targetFilePath && typeof record.targetFilePath === "string") {
+      targetFiles.push(record.targetFilePath.trim());
+    }
+    if (Array.isArray(record.supportingEvidence)) {
+      for (const ev of record.supportingEvidence) {
+        if (ev && typeof ev.filePath === "string" && ev.filePath.trim()) {
+          targetFiles.push(ev.filePath.trim());
+        }
+      }
+    }
+
+    const uniqueFiles = Array.from(new Set(targetFiles)).filter(Boolean);
+    if (uniqueFiles.length === 0) {
+      return {
+        driftStatus: "CURRENT",
+        isPotentiallyStale: false,
+        newerCommitCount: 0,
+      };
+    }
+
+    const sinceDate = record.updatedAt || record.reviewedAt || record.createdAt;
+
+    try {
+      const newerDiffs = await this.prisma.commitDiff.findMany({
+        where: {
+          commit: {
+            repositoryId: record.repositoryId,
+            committedAt: { gt: sinceDate },
+          },
+          OR: uniqueFiles.map((file) => ({
+            filePath: { contains: file },
+          })),
+        },
+        include: {
+          commit: {
+            select: { sha: true, committedAt: true },
+          },
+        },
+        orderBy: {
+          commit: { committedAt: "desc" },
+        },
+        take: 20,
+      });
+
+      if (newerDiffs && newerDiffs.length > 0) {
+        const driftedFiles = Array.from(
+          new Set(newerDiffs.map((d) => d.filePath)),
+        );
+        const uniqueShas = Array.from(
+          new Set(newerDiffs.map((d) => d.commit.sha)),
+        );
+        return {
+          driftStatus: "NEEDS_REVIEW",
+          isPotentiallyStale: true,
+          driftedFiles,
+          newerCommitCount: uniqueShas.length,
+          latestDriftingCommitSha: newerDiffs[0].commit.sha,
+          latestDriftingCommitAt:
+            newerDiffs[0].commit.committedAt.toISOString(),
+        };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to compute drift for decision ${record.id}: ${err}`,
+      );
+    }
+
+    return {
+      driftStatus: "CURRENT",
+      isPotentiallyStale: false,
+      newerCommitCount: 0,
+    };
   }
 
   /**
@@ -878,7 +1005,17 @@ export class DecisionsService {
     };
   }
 
-  private mapDecisionToDto(record: any): EngineeringDecisionDto {
+  private mapDecisionToDto(
+    record: any,
+    driftData?: {
+      driftStatus?: "NEEDS_REVIEW" | "CURRENT";
+      isPotentiallyStale?: boolean;
+      driftedFiles?: string[];
+      newerCommitCount?: number;
+      latestDriftingCommitSha?: string;
+      latestDriftingCommitAt?: string;
+    },
+  ): EngineeringDecisionDto {
     return {
       id: record.id,
       workspaceId: record.workspaceId,
@@ -902,8 +1039,24 @@ export class DecisionsService {
       supersedesId: record.supersedesId,
       supersededById: record.supersededById,
       createdFromClaimId: record.createdFromClaimId,
-      createdAt: record.createdAt.toISOString(),
-      updatedAt: record.updatedAt.toISOString(),
+      driftStatus: driftData?.driftStatus,
+      isPotentiallyStale: driftData?.isPotentiallyStale,
+      driftedFiles: driftData?.driftedFiles,
+      newerCommitCount: driftData?.newerCommitCount,
+      latestDriftingCommitSha: driftData?.latestDriftingCommitSha,
+      latestDriftingCommitAt: driftData?.latestDriftingCommitAt,
+      createdAt:
+        record.createdAt instanceof Date
+          ? record.createdAt.toISOString()
+          : record.createdAt
+            ? String(record.createdAt)
+            : new Date().toISOString(),
+      updatedAt:
+        record.updatedAt instanceof Date
+          ? record.updatedAt.toISOString()
+          : record.updatedAt
+            ? String(record.updatedAt)
+            : new Date().toISOString(),
     };
   }
 }

@@ -1,0 +1,128 @@
+.bannerContainer {
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.bannerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.titleArea {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.warningIcon {
+  font-size: 1.1rem;
+}
+
+.titleText {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #B45309;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background-color: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
+}
+
+.description {
+  font-size: 0.8rem;
+  color: var(--color-text);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.5);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.actionsArea {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.confirmBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #D97706;
+  color: #FFFFFF;
+  border: none;
+  transition: background-color 0.15s ease;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  background-color: #B45309;
+}
+
+.confirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.supersedeBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  transition: all 0.15s ease;
+}
+
+.supersedeBtn:hover {
+  background-color: var(--color-surface);
+  border-color: var(--color-text-secondary);
+}
+
+.lineageRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(245, 158, 11, 0.3);
+}
+
+.lineageTag {
+  font-weight: 600;
+  color: var(--color-primary);
+}

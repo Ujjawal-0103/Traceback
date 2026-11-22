@@ -31,6 +31,7 @@ import {
   CheckChangeAgainstDecisionsResponse,
   ImportRepositoryByUrlDto,
   ImportRepositoryByUrlResponse,
+  WorkspaceCalibrationDto,
   CalibrationScorecardDto,
   AdrFileDto,
   AdrSyncResultDto,
@@ -124,9 +125,15 @@ async function request<T>(
           errorJson.message ||
           (typeof errorJson.error === "string" ? errorJson.error : null);
         if (extracted) {
-          errorMsg = Array.isArray(extracted)
-            ? extracted.join(", ")
-            : extracted;
+          if (Array.isArray(extracted)) {
+            errorMsg = extracted.map((m: unknown) => String(m)).join("; ");
+          } else if (typeof extracted === "string") {
+            errorMsg = extracted;
+          } else if (typeof extracted === "object" && extracted !== null) {
+            errorMsg = (extracted as any).message || JSON.stringify(extracted);
+          } else {
+            errorMsg = String(extracted);
+          }
         }
         details = errorJson;
       } catch {
@@ -140,7 +147,12 @@ async function request<T>(
     if (err instanceof ApiError) {
       throw err;
     }
-    const message = err instanceof Error ? err.message : String(err);
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+          ? err
+          : JSON.stringify(err);
     throw new ApiError(`Network error connecting to API: ${message}`);
   }
 }
@@ -604,6 +616,27 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ reviewNotes }),
       },
+    );
+  },
+
+  async confirmDecisionValid(
+    repositoryId: string,
+    id: string,
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<any> {
+    return request<any>(
+      `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/${id}/confirm-valid`,
+      {
+        method: "POST",
+      },
+    );
+  },
+
+  async getWorkspaceCalibration(
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<WorkspaceCalibrationDto> {
+    return request<WorkspaceCalibrationDto>(
+      `/workspaces/${workspaceId}/calibration`,
     );
   },
 

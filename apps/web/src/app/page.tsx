@@ -7,8 +7,10 @@ import { api } from "../lib/api";
 import {
   RepositoryDetailsDto,
   VerificationHistoryItem,
+  WorkspaceCalibrationDto,
 } from "@traceback/shared-types";
 import { CalibrationScorecard } from "../components/CalibrationScorecard";
+import { CalibrationScorecard as WorkspaceCalibrationScorecard } from "../components/dashboard/CalibrationScorecard";
 
 export default function HomePage() {
   const { user, activeWorkspace } = useAuth();
@@ -18,21 +20,27 @@ export default function HomePage() {
     VerificationHistoryItem[]
   >([]);
   const [decisionsCount, setDecisionsCount] = useState<number>(0);
+  const [calibration, setCalibration] =
+    useState<WorkspaceCalibrationDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingCalibration, setIsLoadingCalibration] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
       if (!activeWorkspace) return;
       try {
         setIsLoading(true);
-        const [repos, history] = await Promise.all([
+        setIsLoadingCalibration(true);
+        const [repos, history, calibData] = await Promise.all([
           api.getRepositories(activeWorkspace.id).catch(() => []),
           api
             .getWorkspaceHistory(activeWorkspace.id, 1, 5)
             .catch(() => ({ items: [], total: 0 })),
+          api.getWorkspaceCalibration(activeWorkspace.id).catch(() => null),
         ]);
         setRepositories(repos);
         setRecentVerifications(history.items || []);
+        setCalibration(calibData);
 
         if (repos.length > 0) {
           const decs = await api
@@ -42,6 +50,7 @@ export default function HomePage() {
         }
       } finally {
         setIsLoading(false);
+        setIsLoadingCalibration(false);
       }
     }
 
@@ -414,6 +423,12 @@ export default function HomePage() {
             </Link>
           </div>
         </section>
+
+        {/* Workspace Calibration & Context Blind-Spot Telemetry */}
+        <WorkspaceCalibrationScorecard
+          calibration={calibration}
+          isLoading={isLoadingCalibration}
+        />
 
         {/* Workspace Metrics & Recent Activity Grid */}
         <section

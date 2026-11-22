@@ -257,8 +257,8 @@ export function Navbar() {
       ),
     },
     {
-      href: "/evidence",
-      label: "Evidence",
+      href: "/provenance",
+      label: "Provenance",
       icon: (active) => (
         <svg
           width="16"
@@ -271,9 +271,11 @@ export function Navbar() {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <ellipse cx="12" cy="5" rx="9" ry="3" />
-          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
         </svg>
       ),
     },
@@ -801,8 +803,8 @@ export function Navbar() {
                 if (!isSearchOpen) setIsSearchOpen(true);
               }}
               onFocus={() => setIsSearchOpen(true)}
-              placeholder="Search repositories, decisions, or evidence..."
-              aria-label="Search repositories, decisions, or evidence..."
+              placeholder="Search repositories or decisions..."
+              aria-label="Search repositories or decisions..."
               style={{
                 flex: 1,
                 border: "none",
@@ -926,7 +928,7 @@ export function Navbar() {
                       Search Engineering Decisions
                     </Link>
                     <Link
-                      href="/evidence"
+                      href="/provenance"
                       onClick={() => setIsSearchOpen(false)}
                       style={{
                         padding: "0.4rem 0.6rem",
@@ -939,9 +941,9 @@ export function Navbar() {
                       }}
                     >
                       <span style={{ color: "var(--color-primary, #2563eb)" }}>
-                        🔍
+                        🌐
                       </span>{" "}
-                      Explore Git & PR Evidence
+                      Explore Causal Provenance Graph
                     </Link>
                   </div>
                 </div>
@@ -1085,7 +1087,7 @@ export function Navbar() {
                     </div>
                   )}
 
-                  {/* Evidence Direct Link */}
+                  {/* Provenance Direct Link */}
                   <div
                     style={{
                       borderTop: "1px solid var(--color-border, #E2E8F0)",
@@ -1093,7 +1095,7 @@ export function Navbar() {
                     }}
                   >
                     <Link
-                      href={`/evidence?query=${encodeURIComponent(searchQuery)}`}
+                      href="/provenance"
                       onClick={() => setIsSearchOpen(false)}
                       style={{
                         display: "flex",
@@ -1107,8 +1109,7 @@ export function Navbar() {
                         textDecoration: "none",
                       }}
                     >
-                      <span>🔍</span> Search raw commits, PRs, and issues for
-                      &quot;{searchQuery}&quot; &rarr;
+                      <span>🌐</span> Explore Causal Provenance Graph &rarr;
                     </Link>
                   </div>
                 </div>

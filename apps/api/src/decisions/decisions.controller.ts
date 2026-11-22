@@ -241,4 +241,19 @@ export class DecisionsController {
       user,
     );
   }
+
+  @Post(":id/confirm-valid")
+  async confirmValid(
+    @Param("workspaceId") workspaceId: string,
+    @Param("repositoryId") repositoryId: string,
+    @Param("id") id: string,
+    @CurrentUser() user?: AuthenticatedUser,
+  ): Promise<EngineeringDecisionDto> {
+    return this.decisionsService.confirmDecisionValid(
+      workspaceId,
+      repositoryId,
+      id,
+      user,
+    );
+  }
 }

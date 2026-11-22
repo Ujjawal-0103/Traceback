@@ -73,7 +73,10 @@ export const configuration = (): { app: AppConfig; github: GitHubConfig } => {
     : rawWebhookSecret || "development-webhook-secret";
 
   const neo4jUri = process.env.NEO4J_URI?.trim() || undefined;
-  const neo4jUsername = process.env.NEO4J_USERNAME?.trim() || undefined;
+  const neo4jUsername =
+    process.env.NEO4J_USERNAME?.trim() ||
+    process.env.NEO4J_USER?.trim() ||
+    undefined;
   const neo4jPassword = process.env.NEO4J_PASSWORD?.trim() || undefined;
   const neo4jDatabase = process.env.NEO4J_DATABASE?.trim() || "neo4j";
 

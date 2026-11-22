@@ -678,8 +678,75 @@ export interface EngineeringDecisionDto {
   supersedesId?: string | null;
   supersededById?: string | null;
   createdFromClaimId?: string | null;
+  driftStatus?: "NEEDS_REVIEW" | "CURRENT";
+  isPotentiallyStale?: boolean;
+  driftedFiles?: string[];
+  newerCommitCount?: number;
+  latestDriftingCommitSha?: string;
+  latestDriftingCommitAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkspaceCalibrationDto {
+  workspaceId: string;
+  calculatedAt?: string;
+  totals?: {
+    verifiedSessions: number;
+    extractedClaims: number;
+    humanReviews: number;
+  };
+  verdictBreakdown?: {
+    supported: { count: number; percentage: number };
+    contradicted: { count: number; percentage: number };
+    insufficientEvidence: { count: number; percentage: number };
+    mixed: { count: number; percentage: number };
+  };
+  verdictDistribution: {
+    total: number;
+    supported: number;
+    supportedPct: number;
+    contradicted: number;
+    contradictedPct: number;
+    mixed: number;
+    mixedPct: number;
+    insufficientEvidence: number;
+    insufficientEvidencePct: number;
+  };
+  humanOversight: {
+    totalEvaluated: number;
+    totalReviewed?: number;
+    humanReviewedCount: number;
+    humanReviewRate: number;
+    agreementCount: number;
+    overrideCount: number;
+    overridden?: number;
+    overrideRate: number;
+    overrideRatePercent?: number;
+    averageConfidence?: number;
+  };
+  decisionHealth: {
+    total: number;
+    totalDecisions?: number;
+    accepted: number;
+    freshDecisionsCount?: number;
+    needsReview: number;
+    staleDecisionsCount?: number;
+    superseded: number;
+    rejected: number;
+    candidate: number;
+  };
+  contextBlindSpots: Array<{
+    repositoryId: string;
+    repositoryName: string;
+    filePath: string;
+    commitCount: number;
+    insufficientEvidenceHits: number;
+    hasAcceptedDecision: boolean;
+    unindexedFilesCount?: number;
+    missingDecisionsCount?: number;
+    riskScore?: "HIGH" | "MEDIUM" | "LOW";
+  }>;
 }
 
 export interface CreateEngineeringDecisionDto {

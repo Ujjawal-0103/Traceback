@@ -15,6 +15,9 @@ import { DecisionsModule } from "./decisions/decisions.module";
 import { TelemetryModule } from "./telemetry/telemetry.module";
 import { DecisionPromotionModule } from "./decision-promotion/decision-promotion.module";
 import { AdrSyncModule } from "./adr-sync/adr-sync.module";
+import { ProvenanceModule } from "./provenance/provenance.module";
+import { CodeExplainerModule } from "./code-explainer/code-explainer.module";
+import { CalibrationModule } from "./calibration/calibration.module";
 
 import * as path from "path";
 
@@ -44,6 +47,9 @@ import * as path from "path";
     TelemetryModule,
     DecisionPromotionModule,
     AdrSyncModule,
+    ProvenanceModule,
+    CodeExplainerModule,
+    CalibrationModule,
   ],
 })
 export class AppModule {}

@@ -3,14 +3,20 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createTracebackMcpServer } from "../server";
 import { loadConfig } from "../config";
-
-// Route all standard logs to stderr so stdout remains exclusively clean JSON-RPC for MCP clients
-const originalConsoleLog = console.log;
-console.log = (...args: any[]) => {
-  console.error("[traceback-mcp]", ...args);
-};
+import { runCheckDiff } from "./check-diff";
 
 async function main() {
+  if (process.argv[2] === "check-diff") {
+    const exitCode = await runCheckDiff(process.argv.slice(3));
+    process.exit(exitCode);
+  }
+
+  // Route all standard logs to stderr so stdout remains exclusively clean JSON-RPC for MCP clients
+  const originalConsoleLog = console.log;
+  console.log = (...args: any[]) => {
+    console.error("[traceback-mcp]", ...args);
+  };
+
   const config = loadConfig();
 
   // Diagnostics to stderr
