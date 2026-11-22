@@ -31,6 +31,7 @@ import {
   CheckChangeAgainstDecisionsResponse,
   ImportRepositoryByUrlDto,
   ImportRepositoryByUrlResponse,
+  CalibrationScorecardDto,
 } from "@traceback/shared-types";
 
 // Ensure the API base URL targets the /api global prefix used by NestJS
@@ -684,6 +685,18 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ disposition, notes }),
       },
+    );
+  },
+
+  // ============================================================================
+  // Deliverable #4: Telemetry & Calibration Scorecard
+  // ============================================================================
+
+  async getCalibrationScorecard(
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<CalibrationScorecardDto> {
+    return request<CalibrationScorecardDto>(
+      `/workspaces/${workspaceId}/telemetry/calibration`,
     );
   },
 };

@@ -12,6 +12,7 @@ import { AuthModule } from "./auth/auth.module";
 import { VerificationModule } from "./verification/verification.module";
 import { AdvisoryModule } from "./advisory/advisory.module";
 import { DecisionsModule } from "./decisions/decisions.module";
+import { TelemetryModule } from "./telemetry/telemetry.module";
 
 import * as path from "path";
 
@@ -38,6 +39,7 @@ import * as path from "path";
     VerificationModule,
     AdvisoryModule,
     DecisionsModule,
+    TelemetryModule,
   ],
 })
 export class AppModule {}
