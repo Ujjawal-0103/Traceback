@@ -3,6 +3,7 @@ import {
   EvidenceSearchResponse,
   CheckChangeAgainstDecisionsResponse,
   CheckChangeAgainstDecisionsRequest,
+  HistoricalIntentCheckSessionDto,
 } from "@traceback/shared-types";
 import { McpServerConfig, loadConfig } from "./config";
 
@@ -290,6 +291,30 @@ export class TracebackApiClient {
           severity: params.severity || "MEDIUM",
           status: "CANDIDATE",
           supportingEvidence: params.supportingEvidence || [],
+        },
+      },
+    );
+  }
+
+  /**
+   * Run a historical intent check session against prospective code diff.
+   */
+  async runHistoricalIntentCheck(params: {
+    workspaceId: string;
+    repositoryId: string;
+    diff: string;
+    filePath?: string;
+    changeDescription?: string;
+  }): Promise<HistoricalIntentCheckSessionDto> {
+    return this.request<HistoricalIntentCheckSessionDto>(
+      `workspaces/${encodeURIComponent(params.workspaceId)}/repositories/${encodeURIComponent(params.repositoryId)}/advisory/intent-check`,
+      {
+        method: "POST",
+        workspaceId: params.workspaceId,
+        body: {
+          diff: params.diff,
+          filePath: params.filePath,
+          changeDescription: params.changeDescription,
         },
       },
     );

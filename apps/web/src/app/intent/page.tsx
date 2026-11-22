@@ -11,6 +11,7 @@ import {
   IntentConflictItem,
   HistoricalIntentCheckSessionDto,
 } from "@traceback/shared-types";
+import { ExportIntentMarkdownButton } from "../../components/intent/ExportIntentMarkdownButton";
 
 function HistoricalIntentContent() {
   const { activeWorkspace, user } = useAuth();
@@ -570,6 +571,21 @@ function HistoricalIntentContent() {
                 gap: "1.25rem",
               }}
             >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                }}
+              >
+                <ExportIntentMarkdownButton
+                  session={currentSession}
+                  repositoryName={
+                    repositories.find((r) => r.id === selectedRepoId)?.fullName
+                  }
+                />
+              </div>
+
               {/* Outcome Banner */}
               {(() => {
                 const badge = getOutcomeBadge(currentSession.outcome);
