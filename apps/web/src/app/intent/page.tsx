@@ -11,6 +11,7 @@ import {
   IntentConflictItem,
   HistoricalIntentCheckSessionDto,
 } from "@traceback/shared-types";
+import { IntentMarkdownExport } from "../../components/intent/IntentMarkdownExport";
 
 function HistoricalIntentContent() {
   const { activeWorkspace, user } = useAuth();
@@ -645,6 +646,17 @@ function HistoricalIntentContent() {
                   </div>
                 );
               })()}
+
+              {/* 1-Click Markdown Export */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                }}
+              >
+                <IntentMarkdownExport session={currentSession} />
+              </div>
 
               {/* Detected Conflicts / Constraints List */}
               <div

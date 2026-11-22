@@ -106,7 +106,7 @@ describe("Navbar Component — Design #2: Elevated with Workspace Selector", () 
       { text: "Verify", href: "/verify" },
       { text: "Historical Intent", href: "/intent" },
       { text: "Decision Memory", href: "/decisions" },
-      { text: "Evidence", href: "/evidence" },
+      { text: "Provenance", href: "/provenance" },
       { text: "History & Reports", href: "/history" },
       { text: "Repositories", href: "/repositories" },
     ];
@@ -116,6 +116,11 @@ describe("Navbar Component — Design #2: Elevated with Workspace Selector", () 
       expect(links[idx]).toHaveTextContent(expected.text);
       expect(links[idx]).toHaveAttribute("href", expected.href);
     });
+
+    // Evidence feature is strictly removed from user-facing navigation
+    expect(
+      screen.queryByRole("link", { name: /^evidence$/i }),
+    ).not.toBeInTheDocument();
 
     // Active route (/repositories) has distinctive primary active styling & accessibility attributes
     const activeLink = links[6];
@@ -157,7 +162,7 @@ describe("Navbar Component — Design #2: Elevated with Workspace Selector", () 
     );
 
     const searchInput = screen.getByPlaceholderText(
-      "Search repositories, decisions, or evidence...",
+      "Search repositories or decisions...",
     );
     expect(searchInput).toBeInTheDocument();
     expect(screen.getByText("Ctrl")).toBeInTheDocument();
@@ -297,7 +302,7 @@ describe("Navbar Component — Design #2: Elevated with Workspace Selector", () 
     ).not.toBeInTheDocument();
     expect(
       screen.queryByPlaceholderText(
-        "Search repositories, decisions, or evidence...",
+        "Search repositories or decisions...",
       ),
     ).not.toBeInTheDocument();
     expect(

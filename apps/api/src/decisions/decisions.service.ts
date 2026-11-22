@@ -56,7 +56,14 @@ export class DecisionsService {
       orderBy: { createdAt: "desc" },
     });
 
-    return records.map((r) => this.mapDecisionToDto(r));
+    const dtos = await Promise.all(
+      records.map(async (r) => {
+        const drift = await this.computeDecisionDrift(r);
+        return this.mapDecisionToDto(r, drift);
+      }),
+    );
+
+    return dtos;
   }
 
   async getDecisionById(
@@ -74,7 +81,8 @@ export class DecisionsService {
       throw new NotFoundException(`Engineering decision ${id} not found.`);
     }
 
-    return this.mapDecisionToDto(record);
+    const drift = await this.computeDecisionDrift(record);
+    return this.mapDecisionToDto(record, drift);
   }
 
   async createDecision(
@@ -350,7 +358,139 @@ export class DecisionsService {
     return this.mapDecisionToDto(decisionRecord);
   }
 
-  private mapDecisionToDto(record: any): EngineeringDecisionDto {
+  async confirmDecisionValid(
+    workspaceId: string,
+    repositoryId: string,
+    id: string,
+    user?: AuthenticatedUser,
+  ): Promise<EngineeringDecisionDto> {
+    const existing = await this.getDecisionById(workspaceId, repositoryId, id);
+    if (existing.status !== "ACCEPTED") {
+      throw new BadRequestException(
+        "Only ACCEPTED decisions can be confirmed valid against latest commits.",
+      );
+    }
+    const note = `Confirmed valid against current repository state by ${user?.name || "Human Reviewer"} on ${new Date().toISOString()}`;
+    const updatedReviewNotes = existing.reviewNotes
+      ? `${existing.reviewNotes}\n${note}`
+      : note;
+
+    const updated = await this.prisma.engineeringDecision.update({
+      where: { id },
+      data: {
+        updatedAt: new Date(),
+        reviewedAt: new Date(),
+        reviewerId: user?.id || existing.reviewerId,
+        reviewerName: user?.name || existing.reviewerName,
+        reviewNotes: updatedReviewNotes,
+      },
+    });
+
+    return this.mapDecisionToDto(updated, {
+      driftStatus: "CURRENT",
+      isPotentiallyStale: false,
+      newerCommitCount: 0,
+      driftedFiles: [],
+    });
+  }
+
+  async computeDecisionDrift(record: any): Promise<{
+    driftStatus?: "NEEDS_REVIEW" | "CURRENT";
+    isPotentiallyStale?: boolean;
+    driftedFiles?: string[];
+    newerCommitCount?: number;
+    latestDriftingCommitSha?: string;
+    latestDriftingCommitAt?: string;
+  }> {
+    if (record.status !== "ACCEPTED") {
+      return { isPotentiallyStale: false };
+    }
+
+    const targetFiles: string[] = [];
+    if (record.targetFilePath && typeof record.targetFilePath === "string") {
+      targetFiles.push(record.targetFilePath.trim());
+    }
+    if (Array.isArray(record.supportingEvidence)) {
+      for (const ev of record.supportingEvidence) {
+        if (ev && typeof ev.filePath === "string" && ev.filePath.trim()) {
+          targetFiles.push(ev.filePath.trim());
+        }
+      }
+    }
+
+    const uniqueFiles = Array.from(new Set(targetFiles)).filter(Boolean);
+    if (uniqueFiles.length === 0) {
+      return {
+        driftStatus: "CURRENT",
+        isPotentiallyStale: false,
+        newerCommitCount: 0,
+      };
+    }
+
+    const sinceDate = record.updatedAt || record.reviewedAt || record.createdAt;
+
+    try {
+      const newerDiffs = await this.prisma.commitDiff.findMany({
+        where: {
+          commit: {
+            repositoryId: record.repositoryId,
+            committedAt: { gt: sinceDate },
+          },
+          OR: uniqueFiles.map((file) => ({
+            filePath: { contains: file },
+          })),
+        },
+        include: {
+          commit: {
+            select: { sha: true, committedAt: true },
+          },
+        },
+        orderBy: {
+          commit: { committedAt: "desc" },
+        },
+        take: 20,
+      });
+
+      if (newerDiffs && newerDiffs.length > 0) {
+        const driftedFiles = Array.from(
+          new Set(newerDiffs.map((d) => d.filePath)),
+        );
+        const uniqueShas = Array.from(
+          new Set(newerDiffs.map((d) => d.commit.sha)),
+        );
+        return {
+          driftStatus: "NEEDS_REVIEW",
+          isPotentiallyStale: true,
+          driftedFiles,
+          newerCommitCount: uniqueShas.length,
+          latestDriftingCommitSha: newerDiffs[0].commit.sha,
+          latestDriftingCommitAt: newerDiffs[0].commit.committedAt.toISOString(),
+        };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to compute drift for decision ${record.id}: ${err}`,
+      );
+    }
+
+    return {
+      driftStatus: "CURRENT",
+      isPotentiallyStale: false,
+      newerCommitCount: 0,
+    };
+  }
+
+  private mapDecisionToDto(
+    record: any,
+    driftData?: {
+      driftStatus?: "NEEDS_REVIEW" | "CURRENT";
+      isPotentiallyStale?: boolean;
+      driftedFiles?: string[];
+      newerCommitCount?: number;
+      latestDriftingCommitSha?: string;
+      latestDriftingCommitAt?: string;
+    },
+  ): EngineeringDecisionDto {
     return {
       id: record.id,
       workspaceId: record.workspaceId,
@@ -374,8 +514,24 @@ export class DecisionsService {
       supersedesId: record.supersedesId,
       supersededById: record.supersededById,
       createdFromClaimId: record.createdFromClaimId,
-      createdAt: record.createdAt.toISOString(),
-      updatedAt: record.updatedAt.toISOString(),
+      driftStatus: driftData?.driftStatus,
+      isPotentiallyStale: driftData?.isPotentiallyStale,
+      driftedFiles: driftData?.driftedFiles,
+      newerCommitCount: driftData?.newerCommitCount,
+      latestDriftingCommitSha: driftData?.latestDriftingCommitSha,
+      latestDriftingCommitAt: driftData?.latestDriftingCommitAt,
+      createdAt:
+        record.createdAt instanceof Date
+          ? record.createdAt.toISOString()
+          : record.createdAt
+            ? String(record.createdAt)
+            : new Date().toISOString(),
+      updatedAt:
+        record.updatedAt instanceof Date
+          ? record.updatedAt.toISOString()
+          : record.updatedAt
+            ? String(record.updatedAt)
+            : new Date().toISOString(),
     };
   }
 }

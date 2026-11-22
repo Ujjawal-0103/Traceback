@@ -126,6 +126,11 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
   it("renders verification form and loads repositories", async () => {
     render(<VerifyPage />);
 
+    // Switch to Audit External Explanation tab
+    fireEvent.click(
+      screen.getByRole("button", { name: /audit external explanation/i }),
+    );
+
     expect(screen.getByText("Verification Workspace")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
@@ -140,6 +145,11 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
 
   it("submits explanation, renders decomposed claims and machine assessment badges", async () => {
     render(<VerifyPage />);
+
+    // Switch to Audit External Explanation tab
+    fireEvent.click(
+      screen.getByRole("button", { name: /audit external explanation/i }),
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
@@ -183,6 +193,11 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
 
   it("records human reviewer verdict when button is clicked", async () => {
     render(<VerifyPage />);
+
+    // Switch to Audit External Explanation tab
+    fireEvent.click(
+      screen.getByRole("button", { name: /audit external explanation/i }),
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();

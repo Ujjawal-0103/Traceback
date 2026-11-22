@@ -1,0 +1,584 @@
+/* ==========================================================================
+   Traceback Native Code Explainer CSS Module
+   Self-contained, bulletproof styling supporting Light & Dark themes
+   ========================================================================== */
+
+.panelContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.introBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  background-color: var(--color-primary-light, rgba(37, 99, 235, 0.08));
+  border: 1px solid var(--color-primary, #2563eb);
+  border-radius: 8px;
+}
+
+.introIcon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.introContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.introTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+
+.introDesc {
+  font-size: 13px;
+  color: var(--color-text-secondary, #475569);
+  line-height: 1.5;
+}
+
+.formCard {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #0f172a);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fieldHint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-muted, #64748b);
+}
+
+.textInput,
+.selectInput,
+.textareaInput {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--color-text, #0f172a);
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.textInput:focus,
+.selectInput:focus,
+.textareaInput:focus {
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(37, 99, 235, 0.15));
+}
+
+.quickPicksRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.quickPicksLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chipButton {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: var(--color-card-muted, #f1f5f9);
+  color: var(--color-primary, #2563eb);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.chipButton:hover {
+  background-color: var(--color-primary-light, rgba(37, 99, 235, 0.1));
+  border-color: var(--color-primary, #2563eb);
+}
+
+.chipButtonActive {
+  background-color: var(--color-primary, #2563eb);
+  color: #ffffff;
+  border-color: var(--color-primary, #2563eb);
+}
+
+.rowTwoColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .rowTwoColumns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.buttonRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color-primary, #2563eb);
+  border: 1px solid var(--color-primary, #2563eb);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #1d4ed8);
+}
+
+.primaryButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================================================
+   Result Summary Card
+   ========================================================================== */
+.resultCard {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border-subtle, #f1f5f9);
+}
+
+.resultTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resultTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+
+.modePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+.modePillAi {
+  background-color: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.modePillDeterministic {
+  background-color: var(--color-success-light, #f0fdf4);
+  color: var(--color-success, #15803d);
+  border: 1px solid rgba(21, 128, 61, 0.25);
+}
+
+.modePillAbstained {
+  background-color: var(--color-warning-light, #fffbeb);
+  color: var(--color-warning, #b45309);
+  border: 1px solid rgba(180, 83, 9, 0.3);
+}
+
+.sourceBadgesRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: var(--color-card-muted, #f1f5f9);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 4px;
+  color: var(--color-text-secondary, #475569);
+}
+
+.explanationText {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text, #0f172a);
+  background-color: var(--color-background, #f8fafc);
+  padding: 16px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle, #f1f5f9);
+  white-space: pre-wrap;
+}
+
+.abstentionBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+  background-color: var(--color-warning-light, #fffbeb);
+  border: 1px solid var(--color-warning, #b45309);
+  border-radius: 8px;
+}
+
+.abstentionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-warning, #b45309);
+}
+
+.abstentionBody {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text, #0f172a);
+}
+
+.abstentionActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.abstentionLink {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary, #2563eb);
+  text-decoration: underline;
+}
+
+.errorBanner {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: var(--color-error-light, #fef2f2);
+  border: 1px solid var(--color-error, #b91c1c);
+  color: var(--color-error, #b91c1c);
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   Section 1 & 2 Breakdown & Audit Divider Styling
+   ========================================================================== */
+.breakdownContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summaryCallout {
+  padding: 16px 18px;
+  background-color: var(--color-primary-light, rgba(37, 99, 235, 0.08));
+  border: 1px solid var(--color-primary, #2563eb);
+  border-left: 4px solid var(--color-primary, #2563eb);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryCalloutHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary, #2563eb);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryCalloutText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text, #0f172a);
+  font-weight: 500;
+}
+
+.breakdownGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .breakdownGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.breakdownBlock {
+  background-color: var(--color-card-muted, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breakdownBlockTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+
+.breakdownBlockBody {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #475569);
+}
+
+.codeMechanicsBlock {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.codeMechanicsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.codeMechanicsTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+
+.codeMechanicsBadge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  background-color: var(--color-card-muted, #f1f5f9);
+  color: var(--color-text-muted, #64748b);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 4px;
+}
+
+.constraintsBlock {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.constraintsTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+
+.constraintsList {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.constraintItem {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #475569);
+}
+
+.cautionBlock {
+  background-color: var(--color-warning-light, #fffbeb);
+  border: 1px solid var(--color-warning, #b45309);
+  border-left: 4px solid var(--color-warning, #b45309);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cautionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-warning, #b45309);
+}
+
+.cautionBody {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text, #0f172a);
+}
+
+.evolutionBlock {
+  background-color: var(--color-card-muted, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evolutionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+
+.sectionTwoDivider {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--color-border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionTwoHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionTwoTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sectionTwoBadge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary-light, rgba(37, 99, 235, 0.08));
+  border: 1px solid var(--color-primary, #2563eb);
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+
+.sectionTwoDescription {
+  font-size: 12px;
+  color: var(--color-text-secondary, #475569);
+  line-height: 1.5;
+  margin: 0;
+}

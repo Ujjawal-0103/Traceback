@@ -13,7 +13,8 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(Neo4jService.name);
   private driver?: Driver;
   private available = false;
-  private databaseName = "neo4j";
+  private databaseName?: string;
+  private lastVerifiedAt = 0;
 
   constructor(@Optional() private readonly configService?: ConfigService) {}
 
@@ -23,14 +24,16 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
       process.env.NEO4J_URI?.trim();
     const username =
       this.configService?.get<string>("app.neo4jUsername") ||
-      process.env.NEO4J_USERNAME?.trim();
+      process.env.NEO4J_USERNAME?.trim() ||
+      process.env.NEO4J_USER?.trim();
     const password =
       this.configService?.get<string>("app.neo4jPassword") ||
       process.env.NEO4J_PASSWORD?.trim();
-    this.databaseName =
+    const rawDb =
       this.configService?.get<string>("app.neo4jDatabase") ||
-      process.env.NEO4J_DATABASE?.trim() ||
-      "neo4j";
+      process.env.NEO4J_DATABASE?.trim();
+    // AuraDB and default Neo4j clusters require omitting database name to use default
+    this.databaseName = rawDb && rawDb !== "neo4j" ? rawDb : undefined;
 
     if (!uri) {
       this.logger.log(
@@ -40,17 +43,30 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    if (this.driver) {
+      try {
+        await this.driver.close();
+      } catch {
+        // ignore close error
+      }
+      this.driver = undefined;
+    }
+
     try {
       const auth =
         username && password ? neo4j.auth.basic(username, password) : undefined;
 
       this.driver = neo4j.driver(uri, auth, {
-        connectionTimeout: 3000,
+        connectionTimeout: 8000,
+        connectionAcquisitionTimeout: 10000,
+        maxTransactionRetryTime: 10000,
         maxConnectionPoolSize: 20,
       });
 
-      const serverInfo = await this.driver.getServerInfo();
+      await this.driver.verifyConnectivity();
       this.available = true;
+      this.lastVerifiedAt = Date.now();
+      const serverInfo = await this.driver.getServerInfo();
       this.logger.log(
         `Neo4j connected successfully: ${serverInfo.address} (${serverInfo.agent})`,
       );
@@ -62,6 +78,32 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
         }`,
       );
     }
+  }
+
+  /**
+   * Verifies existing connection or attempts a lazy reconnect if previously offline.
+   * Caches positive verification for 30s to prevent redundant ping overhead.
+   */
+  async verifyOrReconnect(): Promise<boolean> {
+    const now = Date.now();
+    if (this.driver && this.available && now - this.lastVerifiedAt < 30000) {
+      return true;
+    }
+
+    if (this.driver && this.available) {
+      try {
+        await this.driver.verifyConnectivity();
+        this.lastVerifiedAt = Date.now();
+        return true;
+      } catch {
+        this.available = false;
+      }
+    }
+    await this.onModuleInit();
+    if (this.available) {
+      this.lastVerifiedAt = Date.now();
+    }
+    return this.isAvailable();
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -153,6 +195,8 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
     if (!this.driver) {
       throw new Error("Neo4j driver is uninitialized");
     }
-    return this.driver.session({ database: this.databaseName });
+    return this.databaseName
+      ? this.driver.session({ database: this.databaseName })
+      : this.driver.session();
   }
 }

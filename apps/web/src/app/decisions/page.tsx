@@ -12,6 +12,7 @@ import {
   EngineeringDecisionDto,
 } from "@traceback/shared-types";
 import { AdrSyncPanel } from "../../components/decisions/AdrSyncPanel";
+import { DecisionDriftBanner } from "../../components/decisions/DecisionDriftBanner";
 
 function DecisionMemoryContent() {
   const searchParams = useSearchParams();
@@ -79,7 +80,10 @@ function DecisionMemoryContent() {
       try {
         setIsLoadingDecisions(true);
         setError(null);
-        const queryStatus = status && status !== "ALL" ? status : undefined;
+        const queryStatus =
+          status && status !== "ALL" && status !== "NEEDS_REVIEW"
+            ? status
+            : undefined;
         const data = await api.getDecisions(
           repoId,
           queryStatus,
@@ -250,7 +254,16 @@ function DecisionMemoryContent() {
     }
   };
 
+  const staleCount = decisions.filter(
+    (d) => d.isPotentiallyStale === true || d.driftStatus === "NEEDS_REVIEW",
+  ).length;
+
   const filteredDecisions = decisions.filter((d) => {
+    if (statusFilter === "NEEDS_REVIEW") {
+      if (!d.isPotentiallyStale && d.driftStatus !== "NEEDS_REVIEW") {
+        return false;
+      }
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -473,6 +486,7 @@ function DecisionMemoryContent() {
           <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
             {[
               "ALL",
+              ...(staleCount > 0 ? ["NEEDS_REVIEW"] : []),
               "ACCEPTED",
               "CANDIDATE",
               "IN_REVIEW",
@@ -503,7 +517,7 @@ function DecisionMemoryContent() {
                   cursor: "pointer",
                 }}
               >
-                {st}
+                {st === "NEEDS_REVIEW" ? `⚠️ NEEDS REVIEW (${staleCount})` : st}
               </button>
             ))}
           </div>
@@ -677,6 +691,34 @@ function DecisionMemoryContent() {
                     Created {new Date(dec.createdAt).toLocaleDateString()}
                   </span>
                 </div>
+
+                {/* Decision Drift & Supersession Lineage Banner */}
+                <DecisionDriftBanner
+                  decision={dec}
+                  onConfirmValid={async (decisionId) => {
+                    try {
+                      await api.confirmDecisionValid(
+                        selectedRepoId,
+                        decisionId,
+                        activeWorkspace?.id,
+                      );
+                      setFeedback(
+                        "Decision confirmed valid against latest repository commits.",
+                      );
+                      await loadDecisions(selectedRepoId, statusFilter);
+                    } catch (err: any) {
+                      setError(
+                        `Failed to confirm decision: ${err.message || String(err)}`,
+                      );
+                    }
+                  }}
+                  onSupersede={(targetDec) => {
+                    setIsCreateModalOpen(true);
+                    setNewTitle(`Supersedes: ${targetDec.title}`);
+                    setNewFilePath(targetDec.targetFilePath || "");
+                    setNewSymbol(targetDec.targetSymbol || "");
+                  }}
+                />
 
                 {/* Constraint & Rationale */}
                 <div style={{ marginBottom: "0.75rem" }}>

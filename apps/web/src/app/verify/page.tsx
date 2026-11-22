@@ -11,6 +11,7 @@ import {
   TracebackReportExport,
 } from "@traceback/shared-types";
 import { PromoteToDecisionModal } from "../../components/decisions/PromoteToDecisionModal";
+import { ExplainCodePanel } from "../../components/verify/ExplainCodePanel";
 
 interface ValidatedEvidence {
   sourceType: string;
@@ -77,6 +78,7 @@ function VerifyWorkspaceContent() {
   // Form State
   const [repositories, setRepositories] = useState<RepositoryDetailsDto[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string>(urlRepoId || "");
+  const [activeTab, setActiveTab] = useState<"native" | "audit">("native");
   const [explanation, setExplanation] = useState("");
   const [targetFilePath, setTargetFilePath] = useState("");
   const [targetSymbol, setTargetSymbol] = useState("");
@@ -397,8 +399,9 @@ function VerifyWorkspaceContent() {
           <p
             style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)" }}
           >
-            Decompose AI code rationales into technical claims and verify them
-            against historical repository evidence
+            Decompose code rationales into technical claims and verify them
+            against historical repository evidence — 100% deterministic &amp;
+            standalone
           </p>
         </div>
 
@@ -457,9 +460,94 @@ function VerifyWorkspaceContent() {
         </div>
       )}
 
+      {/* Mode Tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          borderBottom: "1px solid var(--color-border)",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <button
+          type="button"
+          id="tab-explain-verify-native"
+          onClick={() => setActiveTab("native")}
+          style={{
+            padding: "0.65rem 1.25rem",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            backgroundColor: "transparent",
+            color:
+              activeTab === "native"
+                ? "var(--color-primary)"
+                : "var(--color-text-secondary)",
+            border: "none",
+            borderBottom:
+              activeTab === "native"
+                ? "2px solid var(--color-primary)"
+                : "2px solid transparent",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span>💡</span> Explain &amp; Verify from History
+        </button>
+        <button
+          type="button"
+          id="tab-audit-external"
+          onClick={() => setActiveTab("audit")}
+          style={{
+            padding: "0.65rem 1.25rem",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            backgroundColor: "transparent",
+            color:
+              activeTab === "audit"
+                ? "var(--color-primary)"
+                : "var(--color-text-secondary)",
+            border: "none",
+            borderBottom:
+              activeTab === "audit"
+                ? "2px solid var(--color-primary)"
+                : "2px solid transparent",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span>📑</span> Audit External Explanation
+        </button>
+      </div>
+
+      <div
+        style={{
+          display: activeTab === "native" ? "block" : "none",
+          marginBottom: "2rem",
+        }}
+      >
+        <ExplainCodePanel
+          workspaceId={
+            repositories.find((r) => r.id === selectedRepoId)?.workspaceId ||
+            activeWorkspace?.id ||
+            "ws_alpha"
+          }
+          repositoryId={selectedRepoId}
+          repositories={repositories}
+          onSelectRepository={(repoId) => setSelectedRepoId(repoId)}
+          onSessionGenerated={(session) => {
+            setResult(session);
+          }}
+        />
+      </div>
+
       {/* Input Form Card */}
       <div
         style={{
+          display: activeTab === "audit" ? "block" : "none",
           backgroundColor: "var(--color-surface)",
           border: "1px solid var(--color-border)",
           borderRadius: "10px",
@@ -760,6 +848,64 @@ function VerifyWorkspaceContent() {
       {/* Verification Results View */}
       {result && (
         <div style={{ marginTop: "2rem" }}>
+          {/* Section 2 Divider: Verified Claims & Immutable Audit Trail */}
+          <div
+            style={{
+              padding: "1rem 1.25rem",
+              marginBottom: "1rem",
+              borderRadius: "8px",
+              backgroundColor: "var(--color-card-muted)",
+              border: "1px solid var(--color-border)",
+              borderLeft: "4px solid var(--color-primary)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "var(--color-text)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <span>🛡️</span> Section 2: Verified Claims &amp; Supporting
+                Proof (Immutable Audit Trail)
+              </div>
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--color-text-secondary)",
+                  margin: "0.25rem 0 0 0",
+                }}
+              >
+                Every atomic claim below was extracted from the engineering
+                explanation and cross-checked against immutable repository
+                artifacts.
+              </p>
+            </div>
+            <span
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "var(--color-primary)",
+                backgroundColor:
+                  "var(--color-primary-light, rgba(37, 99, 235, 0.08))",
+                padding: "3px 10px",
+                borderRadius: "12px",
+                border: "1px solid var(--color-primary)",
+              }}
+            >
+              {result.claimsCount} Verified Claims
+            </span>
+          </div>
+
           {/* Results Summary Bar */}
           <div
             style={{

@@ -31,6 +31,7 @@ import {
   CheckChangeAgainstDecisionsResponse,
   ImportRepositoryByUrlDto,
   ImportRepositoryByUrlResponse,
+  WorkspaceCalibrationDto,
 } from "@traceback/shared-types";
 
 // Ensure the API base URL targets the /api global prefix used by NestJS
@@ -599,6 +600,27 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ reviewNotes }),
       },
+    );
+  },
+
+  async confirmDecisionValid(
+    repositoryId: string,
+    id: string,
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<any> {
+    return request<any>(
+      `/workspaces/${workspaceId}/repositories/${repositoryId}/decisions/${id}/confirm-valid`,
+      {
+        method: "POST",
+      },
+    );
+  },
+
+  async getWorkspaceCalibration(
+    workspaceId: string = getApiActiveWorkspaceId(),
+  ): Promise<WorkspaceCalibrationDto> {
+    return request<WorkspaceCalibrationDto>(
+      `/workspaces/${workspaceId}/calibration`,
     );
   },
 

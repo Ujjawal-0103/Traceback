@@ -944,7 +944,7 @@ export default function RepositoriesPage() {
                     </button>
 
                     <Link
-                      href={`/evidence?repo=${repo.id}`}
+                      href={`/provenance?repoId=${repo.id}`}
                       style={{
                         padding: "0.45rem 0.9rem",
                         borderRadius: "6px",
@@ -955,7 +955,7 @@ export default function RepositoriesPage() {
                         textDecoration: "none",
                       }}
                     >
-                      🔍 Explore Evidence
+                      🌐 Causal Graph
                     </Link>
 
                     <button

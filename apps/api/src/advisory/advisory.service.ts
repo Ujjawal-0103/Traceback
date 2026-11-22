@@ -260,14 +260,38 @@ export class AdvisoryService {
 
       if (pathMatch || symbolMatch || keywordMatch) {
         const isAccepted = dec.status === "ACCEPTED";
+        let isStale = false;
+        if (isAccepted && dec.targetFilePath && this.prisma.commitDiff) {
+          try {
+            const newerDiff = await this.prisma.commitDiff.findFirst({
+              where: {
+                commit: {
+                  repositoryId,
+                  committedAt: { gt: dec.updatedAt },
+                },
+                filePath: { contains: dec.targetFilePath },
+              },
+            });
+            if (newerDiff) {
+              isStale = true;
+            }
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        const staleWarning = isStale
+          ? " [ATTENTION: Decision has drifted — newer commits modified this file since decision was recorded]."
+          : "";
+
         conflicts.push({
           conflictId: `conflict-decision-${dec.id}`,
-          historicalConstraint: `Reviewed Engineering Decision: ${dec.title}`,
+          historicalConstraint: `Reviewed Engineering Decision: ${dec.title}${isStale ? " (Needs Review)" : ""}`,
           severity: isAccepted ? (dec.severity as any) || "HIGH" : "MEDIUM",
           severityBasis: isAccepted
-            ? `Change modifies a code area governed by an ACCEPTED engineering decision (${dec.id}).`
+            ? `Change modifies a code area governed by an ACCEPTED engineering decision (${dec.id}).${staleWarning}`
             : `Change touches a candidate engineering decision under review (${dec.id}).`,
-          explanation: `Engineering Decision (${dec.status}): "${dec.decision}". Rationale: "${dec.rationale}". Target scope: ${dec.targetFilePath || dec.targetSymbol || "repository"}.`,
+          explanation: `Engineering Decision (${dec.status}): "${dec.decision}". Rationale: "${dec.rationale}". Target scope: ${dec.targetFilePath || dec.targetSymbol || "repository"}.${staleWarning}`,
           supportingEvidence: ((dec.supportingEvidence as any[]) || []).map(
             (ev: any) => ({
               id: ev.id || dec.id,
@@ -284,7 +308,9 @@ export class AdvisoryService {
               filePath: ev.filePath || dec.targetFilePath || undefined,
             }),
           ),
-          recommendedFollowUp: `Review decision ${dec.id}. If this change intentionally alters the constraint, propose an updated or superseding decision record.`,
+          recommendedFollowUp: isStale
+            ? `Review decision ${dec.id}. Newer repository commits modified this area after the decision was recorded. Confirm validity or record a superseding decision.`
+            : `Review decision ${dec.id}. If this change intentionally alters the constraint, propose an updated or superseding decision record.`,
         });
       }
     }
