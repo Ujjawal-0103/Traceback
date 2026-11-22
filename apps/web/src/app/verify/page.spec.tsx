@@ -247,6 +247,11 @@ describe("VerifyPage Component (Sprint 6 Verification Workspace)", () => {
 
     render(<VerifyPage />);
 
+    // Switch to Audit External Explanation tab
+    fireEvent.click(
+      screen.getByRole("button", { name: /audit external explanation/i }),
+    );
+
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
