@@ -9,7 +9,8 @@ import {
   VerificationHistoryItem,
   WorkspaceCalibrationDto,
 } from "@traceback/shared-types";
-import { CalibrationScorecard } from "../components/dashboard/CalibrationScorecard";
+import { CalibrationScorecard } from "../components/CalibrationScorecard";
+import { CalibrationScorecard as WorkspaceCalibrationScorecard } from "../components/dashboard/CalibrationScorecard";
 
 export default function HomePage() {
   const { user, activeWorkspace } = useAuth();
@@ -226,10 +227,7 @@ export default function HomePage() {
         </section>
 
         {/* AI Hallucination & Calibration Scorecard with Context Blind-Spot Map (Deliverable #4) */}
-        <CalibrationScorecard
-          calibration={calibration}
-          isLoading={isLoadingCalibration}
-        />
+        <CalibrationScorecard workspaceId={activeWorkspace?.id} />
 
         {/* 3 Core Pillars Cards */}
         <section
@@ -427,7 +425,7 @@ export default function HomePage() {
         </section>
 
         {/* Workspace Calibration & Context Blind-Spot Telemetry */}
-        <CalibrationScorecard
+        <WorkspaceCalibrationScorecard
           calibration={calibration}
           isLoading={isLoadingCalibration}
         />
