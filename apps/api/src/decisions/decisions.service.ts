@@ -5,6 +5,8 @@ import {
   ForbiddenException,
   Logger,
 } from "@nestjs/common";
+import * as fs from "fs";
+import * as path from "path";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateDecisionDto,
@@ -12,14 +14,23 @@ import {
   ReviewDecisionDto,
   SupersedeDecisionDto,
   ProposeFromClaimDto,
+  SyncAdrsDto,
+  ExportAdrDto,
 } from "./decisions.dto";
 import {
   DecisionStatus,
   DecisionSeverity,
   EngineeringDecisionDto,
   EvidenceReference,
+  AdrFileDto,
+  AdrSyncResultDto,
 } from "@traceback/shared-types";
 import { AuthenticatedUser } from "../auth/auth.types";
+import {
+  formatDecisionToAdrMarkdown,
+  parseAdrMarkdownToDecision,
+  generateAdrFileName,
+} from "./adr-parser.util";
 
 @Injectable()
 export class DecisionsService {
@@ -37,6 +48,30 @@ export class DecisionsService {
       );
     }
     return repo;
+  }
+
+  private async verifyReviewerRole(
+    workspaceId: string,
+    user?: AuthenticatedUser,
+  ): Promise<void> {
+    if (!user || !this.prisma?.workspaceMember?.findUnique) return;
+    try {
+      const membership = await this.prisma.workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: {
+            workspaceId,
+            userId: user.id,
+          },
+        },
+      });
+      if (membership && membership.role === "VIEWER") {
+        throw new ForbiddenException(
+          "Workspace viewers are not permitted to review, approve, or modify engineering decisions.",
+        );
+      }
+    } catch (err) {
+      if (err instanceof ForbiddenException) throw err;
+    }
   }
 
   async listDecisions(
@@ -165,6 +200,7 @@ export class DecisionsService {
     dto: ReviewDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
@@ -190,6 +226,7 @@ export class DecisionsService {
     dto: ReviewDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
@@ -213,6 +250,7 @@ export class DecisionsService {
     dto: ReviewDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     await this.getDecisionById(workspaceId, repositoryId, id);
 
     const updated = await this.prisma.engineeringDecision.update({
@@ -237,6 +275,7 @@ export class DecisionsService {
     dto: SupersedeDecisionDto,
     user?: AuthenticatedUser,
   ): Promise<EngineeringDecisionDto> {
+    await this.verifyReviewerRole(workspaceId, user);
     const oldDecision = await this.getDecisionById(
       workspaceId,
       repositoryId,
@@ -321,18 +360,48 @@ export class DecisionsService {
         ? `Architectural Constraint for ${claim.targetSymbol}`
         : claim.text.slice(0, 100));
 
+    const summary =
+      dto.summary?.trim() || `Derived from verified claim: "${claim.text}"`;
+    const decision =
+      dto.decision?.trim() ||
+      `Preserve established architectural constraint: ${claim.text}`;
+    const rationale =
+      dto.rationale?.trim() ||
+      `Verified historical evidence confirms this requirement was intentionally implemented. Original session explanation: "${claim.session.explanation.slice(0, 300)}"`;
+    const targetFilePath =
+      dto.targetFilePath?.trim() ||
+      claim.session.targetFilePath ||
+      (evidenceItems[0]?.filePath ?? null);
+    const targetSymbol = dto.targetSymbol?.trim() || claim.targetSymbol || null;
+
+    const isExplicitlyAccepted = dto.status === "ACCEPTED";
+    if (isExplicitlyAccepted) {
+      await this.verifyReviewerRole(workspaceId, user);
+    }
+    const status: DecisionStatus = isExplicitlyAccepted
+      ? "ACCEPTED"
+      : "CANDIDATE";
+    const reviewerId = isExplicitlyAccepted ? user?.id || null : null;
+    const reviewerName = isExplicitlyAccepted
+      ? user?.name || "Human Reviewer"
+      : null;
+    const reviewNotes = isExplicitlyAccepted
+      ? dto.reviewNotes?.trim() ||
+        "Explicitly accepted by reviewer during promotion."
+      : null;
+    const reviewedAt = isExplicitlyAccepted ? new Date() : null;
+
     const decisionRecord = await this.prisma.engineeringDecision.create({
       data: {
         workspaceId,
         repositoryId,
         title,
-        summary: `Derived from verified claim: "${claim.text}"`,
-        decision: `Preserve established architectural constraint: ${claim.text}`,
-        rationale: `Verified historical evidence confirms this requirement was intentionally implemented. Original session explanation: "${claim.session.explanation.slice(0, 300)}"`,
-        targetFilePath:
-          claim.session.targetFilePath || (evidenceItems[0]?.filePath ?? null),
-        targetSymbol: claim.targetSymbol || null,
-        status: "CANDIDATE",
+        summary,
+        decision,
+        rationale,
+        targetFilePath,
+        targetSymbol,
+        status: status as any,
         severity: (dto.severity as any) || "HIGH",
         supportingEvidence: (evidenceItems as any) || [],
         relatedCommitSha:
@@ -346,13 +415,15 @@ export class DecisionsService {
             10,
           ) || null,
         createdFromClaimId: claim.id,
-        reviewerId: user?.id || null,
-        reviewerName: user?.name || null,
+        reviewerId,
+        reviewerName,
+        reviewNotes,
+        reviewedAt,
       },
     });
 
     this.logger.log(
-      `Proposed engineering decision candidate ${decisionRecord.id} from claim ${claim.id}`,
+      `Proposed engineering decision ${decisionRecord.id} (${status}) from claim ${claim.id}`,
     );
 
     return this.mapDecisionToDto(decisionRecord);

@@ -98,4 +98,55 @@ describe("Web API Client (apps/web/src/lib/api.ts)", () => {
       }),
     ).rejects.toThrow("Network error connecting to API: Failed to fetch");
   });
+
+  it("should propose decision from claim with payload", async () => {
+    const mockDecision = { id: "dec_1", title: "Test Decision" };
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(mockDecision),
+    });
+
+    const result = await api.proposeDecisionFromClaim("repo_1", {
+      claimId: "claim_1",
+      title: "Test Decision",
+      status: "ACCEPTED",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /\/repositories\/repo_1\/decisions\/propose-from-claim$/,
+      ),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          claimId: "claim_1",
+          title: "Test Decision",
+          status: "ACCEPTED",
+        }),
+      }),
+    );
+    expect(result.id).toBe("dec_1");
+  });
+
+  it("should request bidirectional ADR sync", async () => {
+    const mockSyncResult = {
+      totalFilesScanned: 1,
+      exportedCount: 1,
+      importedCount: 0,
+      syncedFiles: [],
+    };
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(mockSyncResult),
+    });
+
+    const result = await api.syncAdrs("repo_1", { direction: "BIDIRECTIONAL" });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/repositories\/repo_1\/decisions\/sync-adrs$/),
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+    expect(result.totalFilesScanned).toBe(1);
+  });
 });

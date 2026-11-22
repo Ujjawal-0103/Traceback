@@ -10,6 +10,9 @@ import {
   DecisionStatus,
   DecisionSeverity,
   EngineeringDecisionDto,
+  AdrFileDto,
+  AdrSyncResultDto,
+  AdrSyncDirection,
 } from "@traceback/shared-types";
 import { AdrSyncPanel } from "../../components/decisions/AdrSyncPanel";
 import { DecisionDriftBanner } from "../../components/decisions/DecisionDriftBanner";
@@ -53,6 +56,95 @@ function DecisionMemoryContent() {
   const [newSymbol, setNewSymbol] = useState("");
   const [newSeverity, setNewSeverity] = useState<DecisionSeverity>("MEDIUM");
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
+
+  // ADR Preview Modal state
+  const [viewingAdr, setViewingAdr] = useState<AdrFileDto | null>(null);
+  const [isLoadingAdr, setIsLoadingAdr] = useState(false);
+  const [isExportingAdr, setIsExportingAdr] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(false);
+
+  // ADR Bidirectional Sync Modal state
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [syncDirection, setSyncDirection] =
+    useState<AdrSyncDirection>("BIDIRECTIONAL");
+  const [syncDirectory, setSyncDirectory] = useState("docs/adr");
+  const [isExecutingSync, setIsExecutingSync] = useState(false);
+  const [syncResult, setSyncResult] = useState<AdrSyncResultDto | null>(null);
+
+  const handleViewAdr = async (decisionId: string) => {
+    if (!selectedRepoId || !activeWorkspace?.id) return;
+    try {
+      setIsLoadingAdr(true);
+      setError(null);
+      const adr = await api.getDecisionAdr(
+        selectedRepoId,
+        decisionId,
+        activeWorkspace.id,
+      );
+      setViewingAdr(adr);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Failed to retrieve ADR: ${msg}`);
+    } finally {
+      setIsLoadingAdr(false);
+    }
+  };
+
+  const handleExportCurrentAdr = async () => {
+    if (!viewingAdr?.decisionId || !selectedRepoId || !activeWorkspace?.id)
+      return;
+    try {
+      setIsExportingAdr(true);
+      setError(null);
+      const exported = await api.exportDecisionAdr(
+        selectedRepoId,
+        viewingAdr.decisionId,
+        syncDirectory,
+        activeWorkspace.id,
+      );
+      setViewingAdr(exported);
+      setFeedback(`Successfully exported to ${exported.filePath}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Failed to export ADR: ${msg}`);
+    } finally {
+      setIsExportingAdr(false);
+    }
+  };
+
+  const handleExecuteSync = async () => {
+    if (!selectedRepoId || !activeWorkspace?.id) return;
+    try {
+      setIsExecutingSync(true);
+      setError(null);
+      setSyncResult(null);
+      const result = await api.syncAdrs(
+        selectedRepoId,
+        {
+          direction: syncDirection,
+          adrDirectory: syncDirectory.trim() || "docs/adr",
+        },
+        activeWorkspace.id,
+      );
+      setSyncResult(result);
+      setFeedback(
+        `ADR Synchronization complete: ${result.exportedCount} exported, ${result.importedCount} imported.`,
+      );
+      loadDecisions(selectedRepoId, statusFilter);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`ADR synchronization failed: ${msg}`);
+    } finally {
+      setIsExecutingSync(false);
+    }
+  };
+
+  const handleCopyAdrMarkdown = () => {
+    if (!viewingAdr?.markdown) return;
+    navigator.clipboard.writeText(viewingAdr.markdown);
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 2000);
+  };
 
   // Load repositories
   const loadRepositories = useCallback(async () => {
@@ -109,6 +201,17 @@ function DecisionMemoryContent() {
       loadDecisions(selectedRepoId, statusFilter);
     }
   }, [selectedRepoId, statusFilter, loadDecisions]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (viewingAdr) setViewingAdr(null);
+        if (isSyncModalOpen) setIsSyncModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewingAdr, isSyncModalOpen]);
 
   const handleCreateDecision = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,7 +443,29 @@ function DecisionMemoryContent() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            id="btn-sync-adrs"
+            onClick={() => setIsSyncModalOpen(true)}
+            title="Synchronize decisions bidirectionally with Git-native /docs/adr/*.md files"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.45rem 0.9rem",
+              borderRadius: "6px",
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--color-surface)",
+              color: "var(--color-text)",
+              fontSize: "0.825rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            🔄 Sync /docs/adr/
+          </button>
           <button
             type="button"
             id="btn-propose-new-decision"
@@ -963,6 +1088,28 @@ function DecisionMemoryContent() {
                         ⚠️ Dispute Decision
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      id={`btn-view-adr-${dec.id}`}
+                      onClick={() => handleViewAdr(dec.id)}
+                      title="View or export Git-native ADR Markdown record"
+                      style={{
+                        padding: "0.3rem 0.65rem",
+                        borderRadius: "4px",
+                        border: "1px solid var(--color-border)",
+                        backgroundColor: "var(--color-surface)",
+                        color: "var(--color-text)",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                      }}
+                    >
+                      📄 View ADR
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1426,6 +1573,585 @@ function DecisionMemoryContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* View ADR Modal */}
+      {viewingAdr && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="adr-preview-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setViewingAdr(null);
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "var(--color-surface)",
+              borderRadius: "10px",
+              padding: "1.75rem",
+              maxWidth: "750px",
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "var(--shadow-md)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <div>
+                <h3
+                  id="adr-preview-title"
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 700,
+                    color: "var(--color-text)",
+                  }}
+                >
+                  📄 {viewingAdr.identifier}: {viewingAdr.title}
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    marginTop: "0.25rem",
+                    fontSize: "0.8rem",
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  <span>
+                    File: <code>{viewingAdr.filePath}</code>
+                  </span>
+                  <span>•</span>
+                  <span>
+                    Status: <strong>{viewingAdr.status}</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingAdr(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "1.2rem",
+                  color: "var(--color-text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Markdown Preview Area */}
+            <div
+              style={{
+                position: "relative",
+                margin: "1rem 0",
+                backgroundColor: "var(--color-code-bg, #0F172A)",
+                borderRadius: "8px",
+                padding: "1rem",
+                overflowX: "auto",
+                maxHeight: "450px",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <pre
+                style={{
+                  margin: 0,
+                  fontSize: "0.825rem",
+                  fontFamily:
+                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                  color: "var(--color-code-text, #F8FAFC)",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.5,
+                }}
+              >
+                {viewingAdr.markdown}
+              </pre>
+            </div>
+
+            {/* Action Buttons */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: "1.25rem",
+              }}
+            >
+              <button
+                type="button"
+                id="btn-copy-adr-md"
+                onClick={handleCopyAdrMarkdown}
+                style={{
+                  padding: "0.45rem 0.9rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface)",
+                  color: "var(--color-text)",
+                  fontSize: "0.825rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {copyFeedback ? "✓ Copied to Clipboard!" : "📋 Copy Markdown"}
+              </button>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  type="button"
+                  id="btn-export-single-adr"
+                  disabled={isExportingAdr}
+                  onClick={handleExportCurrentAdr}
+                  style={{
+                    padding: "0.45rem 1rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    backgroundColor: "var(--color-primary)",
+                    color: "#FFFFFF",
+                    fontSize: "0.825rem",
+                    fontWeight: 600,
+                    cursor: isExportingAdr ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isExportingAdr
+                    ? "Exporting..."
+                    : `💾 Save to ${viewingAdr.filePath}`}
+                </button>
+                <button
+                  type="button"
+                  id="btn-close-adr-modal"
+                  onClick={() => setViewingAdr(null)}
+                  style={{
+                    padding: "0.45rem 0.85rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "transparent",
+                    color: "var(--color-text)",
+                    fontSize: "0.825rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADR Synchronization Modal */}
+      {isSyncModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="adr-sync-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsSyncModalOpen(false);
+          }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "var(--color-surface)",
+              borderRadius: "10px",
+              padding: "1.75rem",
+              maxWidth: "600px",
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "var(--shadow-md)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <div>
+                <h3
+                  id="adr-sync-title"
+                  style={{
+                    fontSize: "1.2rem",
+                    fontWeight: 700,
+                    color: "var(--color-text)",
+                  }}
+                >
+                  🔄 ADR Git-Native Synchronization
+                </h3>
+                <p
+                  style={{
+                    fontSize: "0.825rem",
+                    color: "var(--color-text-secondary)",
+                    marginTop: "0.2rem",
+                  }}
+                >
+                  Synchronize decision records between PostgreSQL and Git-native
+                  markdown files.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSyncModalOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "1.2rem",
+                  color: "var(--color-text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ margin: "1rem 0" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "var(--color-text)",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                Synchronization Direction
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                  backgroundColor: "var(--color-background)",
+                  padding: "0.75rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    fontSize: "0.825rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="syncDirection"
+                    value="BIDIRECTIONAL"
+                    checked={syncDirection === "BIDIRECTIONAL"}
+                    onChange={() => setSyncDirection("BIDIRECTIONAL")}
+                  />
+                  <span>
+                    <strong>Bidirectional Sync</strong> (Import new ADRs +
+                    Export DB decisions)
+                  </span>
+                </label>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    fontSize: "0.825rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="syncDirection"
+                    value="EXPORT"
+                    checked={syncDirection === "EXPORT"}
+                    onChange={() => setSyncDirection("EXPORT")}
+                  />
+                  <span>
+                    <strong>Export Only</strong> (PostgreSQL decisions →
+                    /docs/adr/*.md)
+                  </span>
+                </label>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    fontSize: "0.825rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="syncDirection"
+                    value="IMPORT"
+                    checked={syncDirection === "IMPORT"}
+                    onChange={() => setSyncDirection("IMPORT")}
+                  />
+                  <span>
+                    <strong>Import Only</strong> (/docs/adr/*.md → PostgreSQL
+                    decisions)
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "1rem" }}>
+              <label
+                htmlFor="sync-dir-input"
+                style={{
+                  display: "block",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "var(--color-text)",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                Target Directory (relative to repo root)
+              </label>
+              <input
+                id="sync-dir-input"
+                type="text"
+                value={syncDirectory}
+                onChange={(e) => setSyncDirectory(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface)",
+                  color: "var(--color-text)",
+                  fontSize: "0.85rem",
+                }}
+              />
+            </div>
+
+            {/* Sync Results Box */}
+            {syncResult && (
+              <div
+                style={{
+                  backgroundColor: "var(--color-background)",
+                  borderRadius: "6px",
+                  padding: "0.85rem",
+                  marginBottom: "1rem",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "0.825rem",
+                    color: "var(--color-text)",
+                    marginBottom: "0.4rem",
+                  }}
+                >
+                  Synchronization Results:
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "0.5rem",
+                    textAlign: "center",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "0.4rem",
+                      backgroundColor: "var(--color-surface)",
+                      borderRadius: "4px",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                      {syncResult.totalFilesScanned}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
+                      Scanned
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      padding: "0.4rem",
+                      backgroundColor: "var(--color-surface)",
+                      borderRadius: "4px",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.1rem",
+                        fontWeight: 700,
+                        color: "var(--color-primary)",
+                      }}
+                    >
+                      {syncResult.exportedCount}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
+                      Exported
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      padding: "0.4rem",
+                      backgroundColor: "var(--color-surface)",
+                      borderRadius: "4px",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.1rem",
+                        fontWeight: 700,
+                        color: "var(--color-success, #10b981)",
+                      }}
+                    >
+                      {syncResult.importedCount}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
+                      Imported
+                    </div>
+                  </div>
+                </div>
+
+                {syncResult.syncedFiles.length > 0 && (
+                  <div
+                    style={{
+                      maxHeight: "120px",
+                      overflowY: "auto",
+                      fontSize: "0.75rem",
+                      fontFamily: "monospace",
+                      color: "var(--color-text-secondary)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.2rem",
+                    }}
+                  >
+                    {syncResult.syncedFiles.map((f, i) => (
+                      <div key={i}>✓ {f}</div>
+                    ))}
+                  </div>
+                )}
+
+                {syncResult.errors && syncResult.errors.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "0.5rem",
+                      padding: "0.4rem 0.6rem",
+                      backgroundColor: "rgba(239, 68, 68, 0.1)",
+                      borderRadius: "4px",
+                      color: "var(--color-error, #ef4444)",
+                      fontSize: "0.75rem",
+                      maxHeight: "100px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: "0.2rem" }}>
+                      Warnings / Skipped Files:
+                    </div>
+                    {syncResult.errors.map((e, idx) => (
+                      <div key={idx}>⚠️ {e}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+                marginTop: "1.25rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsSyncModalOpen(false)}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "transparent",
+                  color: "var(--color-text)",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                id="btn-execute-sync-adrs"
+                disabled={isExecutingSync}
+                onClick={handleExecuteSync}
+                style={{
+                  padding: "0.45rem 1.25rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  backgroundColor: "var(--color-primary)",
+                  color: "#FFFFFF",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: isExecutingSync ? "not-allowed" : "pointer",
+                }}
+              >
+                {isExecutingSync ? "Synchronizing..." : "Run Synchronization"}
+              </button>
+            </div>
           </div>
         </div>
       )}

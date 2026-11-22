@@ -148,8 +148,22 @@ export class VerificationSessionService {
             })),
           },
         },
+        include: {
+          claims: true,
+        },
       });
       sessionId = persisted.id;
+      if (persisted.claims && persisted.claims.length > 0) {
+        for (let i = 0; i < assessments.length; i++) {
+          const matched =
+            persisted.claims.find(
+              (c: any) => c.text === assessments[i].claimText,
+            ) || persisted.claims[i];
+          if (matched) {
+            assessments[i].claimId = matched.id;
+          }
+        }
+      }
     } catch (err) {
       this.logger.warn(
         `Database persistence deferred in standalone mode: ${err instanceof Error ? err.message : String(err)}`,
