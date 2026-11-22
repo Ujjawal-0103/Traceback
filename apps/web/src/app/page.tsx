@@ -225,6 +225,12 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* AI Hallucination & Calibration Scorecard with Context Blind-Spot Map (Deliverable #4) */}
+        <CalibrationScorecard
+          calibration={calibration}
+          isLoading={isLoadingCalibration}
+        />
+
         {/* 3 Core Pillars Cards */}
         <section
           style={{

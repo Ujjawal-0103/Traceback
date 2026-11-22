@@ -8,6 +8,7 @@ import styles from "./calibration.module.css";
 interface CalibrationScorecardProps {
   calibration: WorkspaceCalibrationDto | null;
   isLoading?: boolean;
+  workspaceId?: string;
 }
 
 export function CalibrationScorecard({
